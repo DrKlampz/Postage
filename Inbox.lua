@@ -12,13 +12,60 @@ local buttons = {}
 
 local function Btn(i) return _G["MailItem" .. i .. "Button"] end
 
+-- Which inbox page is showing. Blizzard's own counter if this client has one, otherwise ours
+-- (kept in step by watching the Prev/Next buttons).
+local ourPage = 1
+local function Page()
+    local inbox = _G.InboxFrame
+    if inbox and type(inbox.pageNum) == "number" then return inbox.pageNum end
+    return ourPage
+end
+
 -- the mail index a row is showing right now
 local function RowIndex(i)
     local b = Btn(i)
     if b and type(b.index) == "number" then return b.index end
-    local page = (InboxFrame and InboxFrame.pageNum) or 1
-    return (page - 1) * ROWS + i
+    return (Page() - 1) * ROWS + i
 end
+
+-- Blizzard's Prev/Next page buttons. Their global names differ between clients, so try the
+-- known names, then look for buttons inside the inbox labelled Prev / Next.
+local function Label(b)
+    local ok, t = pcall(b.GetText, b)
+    if ok and type(t) == "string" and not P.IsSecret(t) then return (t:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")) end
+end
+
+local function Scan(frame, want, depth)
+    if not frame or depth > 2 or not frame.GetChildren then return nil end
+    for _, child in ipairs({ frame:GetChildren() }) do
+        local l = child.GetText and Label(child)
+        if l then
+            l = l:lower()
+            for _, w in ipairs(want) do if l == w or l:find("^" .. w) then return child end end
+        end
+        local deeper = Scan(child, want, depth + 1)
+        if deeper then return deeper end
+    end
+end
+
+local pageFound = "not found"
+function P.PageButtons()
+    local inbox = _G.InboxFrame
+    local function button(x) if type(x) == "table" and type(x.Click) == "function" then return x end end
+    local function field(k) return inbox and button(rawget(inbox, k) or nil) end
+    local prev = button(_G.InboxPrevPageButton) or field("PrevPageButton") or field("prevPageButton")
+    local nxt = button(_G.InboxNextPageButton) or field("NextPageButton") or field("nextPageButton")
+    if prev and nxt then pageFound = "by name" return prev, nxt end
+    local prevWords = { "prev", "previous", "<" }
+    local nextWords = { "next", ">" }
+    if type(_G.PREV) == "string" then table.insert(prevWords, 1, _G.PREV:lower()) end
+    if type(_G.NEXT) == "string" then table.insert(nextWords, 1, _G.NEXT:lower()) end
+    prev = prev or Scan(inbox, prevWords, 0)
+    nxt = nxt or Scan(inbox, nextWords, 0)
+    pageFound = (prev and nxt) and "by label" or "not found"
+    return prev, nxt
+end
+function P.PageButtonsFound() return pageFound end
 
 local function AllHeaders()
     local out = {}
@@ -254,8 +301,9 @@ local function HookExpress()
         inbox:EnableMouseWheel(true)
         inbox:HookScript("OnMouseWheel", function(_, delta)
             if not P.On("express") then return end
-            local btn = delta > 0 and _G.InboxPrevPageButton or _G.InboxNextPageButton
-            if btn and btn:IsEnabled() then
+            local prev, nxt = P.PageButtons()
+            local btn = delta > 0 and prev or nxt
+            if btn and btn:IsShown() and (not btn.IsEnabled or btn:IsEnabled()) then
                 btn:Click()
             elseif delta > 0 and InboxPrevPage then pcall(InboxPrevPage)
             elseif delta < 0 and InboxNextPage then pcall(InboxNextPage) end
@@ -310,7 +358,7 @@ local function Build()
         end
     end
 
-    local prev, nxt = _G.InboxPrevPageButton, _G.InboxNextPageButton
+    local prev, nxt = P.PageButtons()
     buttons.open = MakeButton(inbox, "Open", 76, function() Q.Start("open", CheckedIDs()) end,
         "Take everything from the checked mail. COD mail is skipped.")
     buttons.ret = MakeButton(inbox, "Return", 76, function() Q.Start("return", CheckedIDs()) end,
@@ -326,21 +374,38 @@ local function Build()
     end, "Open every mail with gold or items attached, of the kinds ticked in the options. COD is always skipped.\nRight-click: choose which kinds.  Shift-click: stop.")
     buttons.all:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 
-    if prev and nxt then
-        buttons.open:SetPoint("LEFT", prev, "RIGHT", 4, 0)
-        buttons.ret:SetPoint("RIGHT", nxt, "LEFT", -4, 0)
+    -- Open and Return sit in the strip above the first mail row, clear of the rows
+    local first = _G.MailItem1 or Btn(1)
+    if first then
+        buttons.open:SetPoint("BOTTOMLEFT", first, "TOPLEFT", 42, 6)
     else
-        buttons.open:SetPoint("BOTTOMLEFT", inbox, "BOTTOMLEFT", 40, 90)
-        buttons.ret:SetPoint("LEFT", buttons.open, "RIGHT", 4, 0)
+        buttons.open:SetPoint("TOPLEFT", inbox, "TOPLEFT", 60, -58)
     end
+    buttons.ret:SetPoint("LEFT", buttons.open, "RIGHT", 6, 0)
+    -- Open All takes the place of Blizzard's button, or sits between the page buttons
     local blizzAll = _G.OpenAllMail
     if blizzAll then
         buttons.all:SetPoint("CENTER", blizzAll, "CENTER", 0, 0)
     elseif prev and nxt then
-        buttons.all:SetPoint("LEFT", buttons.open, "RIGHT", 4, 0)
+        buttons.all:SetPoint("LEFT", prev, "RIGHT", 30, 0)
     else
-        buttons.all:SetPoint("LEFT", buttons.ret, "RIGHT", 4, 0)
+        buttons.all:SetPoint("LEFT", buttons.ret, "RIGHT", 6, 0)
     end
+
+    -- keep the checkboxes in step when the page changes, whatever drives the paging
+    local function paged(delta)
+        return function()
+            if type(inbox.pageNum) ~= "number" then
+                local pages = math.max(1, math.ceil(P.NumMail() / ROWS))
+                ourPage = math.max(1, math.min(pages, ourPage + delta))
+            end
+            P.RefreshInbox()
+            C_Timer.After(0, P.RefreshInbox)
+        end
+    end
+    if prev then prev:HookScript("OnClick", paged(-1)) end
+    if nxt then nxt:HookScript("OnClick", paged(1)) end
+    inbox:HookScript("OnShow", function() P.RefreshInbox() end)
 
     HookExpress()
     if type(InboxFrame_Update) == "function" then hooksecurefunc("InboxFrame_Update", P.RefreshInbox) end
@@ -348,7 +413,7 @@ local function Build()
 end
 
 P.AddHook("mailInit", Build)
-P.AddHook("mailShow", function() P.RefreshInbox() end)
+P.AddHook("mailShow", function() ourPage = 1 P.RefreshInbox() end)
 P.AddHook("inboxUpdate", function() P.RefreshInbox() end)
 P.AddHook("options", function() P.RefreshInbox() end)
 P.AddHook("mailClosed", function()

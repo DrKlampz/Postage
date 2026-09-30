@@ -254,6 +254,13 @@ SlashCmdList.POSTAGE = P.Safe("Postage command", function(msg)
         Print(("Found %d of %d mailbox parts."):format(#found, #P.PROBE))
         if #missing > 0 then Print("|cffff8844Missing:|r " .. table.concat(missing, ", ")) end
         Print(("Mail in inbox: %d   free bag slots: %d"):format(P.NumMail(), P.FreeBagSlots()))
+        if P.PageButtons then
+            local prev, nxt = P.PageButtons()
+            Print(("Page buttons: %s   InboxFrame_Update: %s   row index: %s   page number: %s"):format(
+                P.PageButtonsFound(), type(InboxFrame_Update) == "function" and "yes" or "no",
+                (_G.MailItem1Button and type(_G.MailItem1Button.index) == "number") and "yes" or "no",
+                (_G.InboxFrame and type(_G.InboxFrame.pageNum) == "number") and "yes" or "no"))
+        end
     else
         Print("Unknown command. Type /postage help.")
     end
