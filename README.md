@@ -2,46 +2,54 @@
 
 A Postal-style mailbox addon for **WoW: Forever**.
 
-Postage replaces the default mailbox's 7-row paged inbox with one scrollable list showing
-every mail at once, with checkboxes and the shift/ctrl/alt-click shortcuts Postal is known for.
+Everything Postage adds lives inside the normal mailbox, the way Postal does.
 
-## What's in v1.0.0
+## Inbox
 
-- **A real inbox list.** Every mail at once, not 7 at a time with pages.
-- **Select.** Checkboxes per mail, with Shift-click to select a range and Ctrl-click to select
-  everything from one sender.
-- **Express.** Shift-click a mail to take it, Ctrl-click to return it.
-- **Open Selected / Open All / Return Selected**, queued safely: it won't try to loot mail your
-  bags don't have room for, and it keeps going even if a mail vanishes mid-queue (taken some
-  other way) instead of getting stuck.
-- **A "expiring soon" warning** on mail with less than a day left that still has money or items
-  attached.
-- **Auction House mail is tagged** so it's easy to spot in the list.
-- **Wire.** If you send mail with gold attached and leave the subject blank, Postage fills it in
-  with the amount.
-- **TradeBlock.** Declines trade requests and guild charter signatures while you're at the
-  mailbox, so a mass-mailing session doesn't get derailed by a popup.
+- **Select.** A checkbox on every mail. Shift-click a checkbox to select a range, ctrl-click to
+  select everything from that sender. Then **Open** or **Return** the checked mail.
+- **Open All.** Opens every mail with gold or items attached, of the kinds you choose
+  (right-click the button: auction sold/won/expired/cancelled/outbid, Postmaster, players).
+  COD mail is always skipped and reported. It keeps bag slots free if you ask it to, and tells
+  you how much gold it collected.
+- **Express.** Shift-click a mail to take it, ctrl-click to return it. Scroll the mouse wheel
+  over the inbox to change pages.
+- **DoNotWant.** Each mail shows how long it has left: yellow means it goes back to the sender,
+  red means it will be deleted.
+
+## Sending
+
+- **BlackBook.** A contacts button next to the To: box with your alts, people you've mailed,
+  friends and guild. Names autocomplete as you type.
+- **Alt-click** an item in your bags to attach it; **shift-alt-click** attaches every stack of it.
+- **QuickAttach.** Buttons beside the Send Mail frame attach all your cloth, leather, ore, herbs,
+  cooking, elemental or enchanting materials in one click.
+- **Wire.** Leave the subject empty when sending gold and it's filled in with the amount.
+
+## Reading
+
+- **Copy** shows a mail's text in a box you can copy from.
+- **Forward** starts a new mail with the same subject and text (attachments aren't forwarded).
+
+## Other
+
+- **TradeBlock** declines trades and guild charters while the mailbox is open.
+- A **Postage** button on the mailbox and a **minimap button** open the options, where every
+  feature can be turned off.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `/postage help` | List commands |
-| `/postage tradeblock` | Toggle blocking trades/charters while at the mailbox |
-| `/postage wire` | Toggle auto-filling the subject with the gold amount |
-| `/postage freeslots <n>` | Always leave `n` bag slots open when opening mail |
-
-## What's not here yet
-
-Postal's contact list (BlackBook), quick multi-item attach for mass-mailing, and
-resend/forward are planned for a later version.
+| `/postage` | Options |
+| `/postage help` | List commands and shortcuts |
+| `/postage minimap` | Show or hide the minimap button |
+| `/postage freeslots <n>` | Keep `n` bag slots free when opening mail |
+| `/postage probe` | Check which mailbox parts Postage found on your client |
 
 ## Notes on WoW: Forever
 
-Mail actions (sending, looting, returning) aren't flagged as restricted anywhere in Forever's
-own API documentation, unlike guild invites or chat, which the client does gate behind a real
-click. These are old, stable globals that have worked the same way in every WoW version for
-about twenty years. If anything about mail turns out to be click-gated on this client after all,
-please open an issue — Postage doesn't yet have a fallback for that.
-
-Bug reports and ideas welcome.
+Postage attaches itself to Blizzard's mailbox frames. If a feature doesn't appear, run
+`/postage probe` and report what it says is missing. QuickAttach's material categories use the
+standard item subclass numbers, which haven't been checked on a Forever client yet; the
+"All trade goods" button works either way.

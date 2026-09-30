@@ -1,12 +1,15 @@
 ## Interface: 16001
 ## Title: |cffffcc00Postage|r
-## Notes: A Postal-style mailbox: a custom scrollable inbox with checkboxes, shift/ctrl/alt-click shortcuts, open-all and return-all, and quality-of-life fixes for the mailbox.
+## Notes: Postal-style mailbox: select and open or return mail in bulk, Open All, shift/ctrl/alt-click shortcuts, a contact book, quick attach, copy and forward.
 ## Author: David
 ## Version: @project-version@
 ## Category: Inventory
+## IconTexture: Interface\Icons\INV_Letter_15
 ## SavedVariables: PostageDB
-## SavedVariablesPerCharacter: PostageCharDB
 ## X-License: MIT
 
 Core.lua
+Menu.lua
 Inbox.lua
+Send.lua
+OpenMail.lua

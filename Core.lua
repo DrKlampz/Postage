@@ -1,41 +1,54 @@
 -- Postage: a Postal-style mailbox addon for WoW: Forever.
--- Core.lua holds settings, the slash command, and two small standalone modules (TradeBlock and
--- Wire). The main event is Inbox.lua, which replaces the default inbox list.
+-- Everything Postage adds lives inside Blizzard's own mailbox, the way Postal does: checkboxes
+-- on the inbox rows, Open/Return/Open All buttons, a contact book on the To: box, and so on.
+-- Core.lua holds settings, events, the slash command and shared helpers.
 local ADDON_NAME, P = ...
 P.name = ADDON_NAME
 
 local function IsSecret(v) return issecretvalue ~= nil and issecretvalue(v) end
 P.IsSecret = IsSecret
-
 local function Trim(s) return (tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", "")) end
 P.Trim = Trim
 
-P.DEFAULTS = {
-    -- Select / Express
-    freeBagSlots     = 0,      -- always leave this many bag slots open when opening mail
-    confirmOpenAll   = true,
-    -- DoNotWant
-    warnReturn       = true,   -- flag mail that will be returned to sender soon
-    warnDelete       = true,   -- flag mail that will just vanish (no return address) soon
-    -- Wire
-    wireEnabled      = true,
-    -- TradeBlock
-    tradeBlock       = true,
-    -- window position
-    posX = nil, posY = nil,
-}
+P.ICON = "Interface\\Icons\\INV_Letter_15"
 
-local function ApplyDefaults(t)
-    for k, v in pairs(P.DEFAULTS) do
-        if t[k] == nil then t[k] = v end
-    end
-    return t
+local function Meta(field)
+    local f = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+    if not f then return nil end
+    local ok, v = pcall(f, ADDON_NAME, field)
+    if ok then return v end
 end
 
-P.db = nil
+P.DEFAULTS = {
+    modules = {
+        select = true, openall = true, express = true, blackbook = true, donotwant = true,
+        carboncopy = true, forward = true, quickattach = true, wire = true, tradeblock = true,
+    },
+    openAll = {
+        ahSold = true, ahExpired = true, ahOutbid = true, ahWon = true, ahCancelled = true,
+        npc = true, player = true,
+    },
+    freeBagSlots = 0,
+    minimap = { show = true, angle = 215 },
+    autocomplete = true,
+    recent = {},     -- recently mailed names, newest first
+    alts = {},       -- ["Name-Realm"] = { name, realm, faction, class }
+}
 
-local function Print(msg) print("|cffffcc00Postage:|r " .. msg) end
-P.Print = Print
+local function Merge(dst, src)
+    for k, v in pairs(src) do
+        if type(v) == "table" then
+            if type(dst[k]) ~= "table" then dst[k] = {} end
+            if next(v) ~= nil and #v == 0 then Merge(dst[k], v) end
+        elseif dst[k] == nil then
+            dst[k] = v
+        end
+    end
+    return dst
+end
+
+function P.Print(msg) print("|cffffcc00Postage:|r " .. tostring(msg)) end
+local Print = P.Print
 
 local reported = {}
 function P.ReportError(what, err)
@@ -51,9 +64,9 @@ function P.Safe(what, fn)
     end
 end
 
----------------------------------------------------------------------------
--- A tiny event dispatcher other modules attach to.
----------------------------------------------------------------------------
+function P.On(mod) return P.db ~= nil and P.db.modules[mod] ~= false end
+
+-- tiny event bus between the modules
 local hooks = {}
 function P.AddHook(name, fn)
     hooks[name] = hooks[name] or {}
@@ -67,113 +80,141 @@ function P.Fire(name, ...)
 end
 
 ---------------------------------------------------------------------------
--- Mail-related helpers shared by Inbox.lua
+-- Shared helpers
 ---------------------------------------------------------------------------
--- The known system subjects for auction house mail, so "Open All" can filter by type. Every one
--- of these is a stable, decades-old FrameXML global string; the literal English text is only a
--- fallback for the rare client where the global itself is missing.
-local function G(name, fallback) return (_G[name]) or fallback end
-P.AH_SUBJECTS = {
-    sold     = G("AUCTION_SOLD_MAIL_SUBJECT", "Auction successful:"),
-    expired  = G("AUCTION_EXPIRED_MAIL_SUBJECT", "Auction expired:"),
-    outbid   = G("AUCTION_OUTBID_MAIL_SUBJECT", "Outbid on"),
-    won      = G("AUCTION_WON_MAIL_SUBJECT", "Auction won:"),
-    cancelled = G("AUCTION_REMOVED_MAIL_SUBJECT", "Auction cancelled:"),
+function P.MoneyText(copper)
+    copper = tonumber(copper) or 0
+    local g, s, c = math.floor(copper / 10000), math.floor((copper % 10000) / 100), copper % 100
+    local parts = {}
+    if g > 0 then parts[#parts + 1] = "|cffffd700" .. g .. "g|r" end
+    if s > 0 then parts[#parts + 1] = "|cffc7c7cf" .. s .. "s|r" end
+    if c > 0 or #parts == 0 then parts[#parts + 1] = "|cffeda55f" .. c .. "c|r" end
+    return table.concat(parts, " ")
+end
+
+-- Auction house mail subjects. These are long-standing FrameXML strings; the English text is
+-- only a fallback if a global is missing.
+local function G(name, fallback)
+    local v = _G[name]
+    if type(v) == "string" then return (v:gsub("%%s.*$", "")) end
+    return fallback
+end
+P.AH = {
+    ahSold      = G("AUCTION_SOLD_MAIL_SUBJECT", "Auction successful: "),
+    ahExpired   = G("AUCTION_EXPIRED_MAIL_SUBJECT", "Auction expired: "),
+    ahOutbid    = G("AUCTION_OUTBID_MAIL_SUBJECT", "Outbid on "),
+    ahWon       = G("AUCTION_WON_MAIL_SUBJECT", "Auction won: "),
+    ahCancelled = G("AUCTION_REMOVED_MAIL_SUBJECT", "Auction cancelled: "),
 }
 
-function P.IsAuctionMail(subject)
-    if type(subject) ~= "string" or IsSecret(subject) then return nil end
-    for kind, prefix in pairs(P.AH_SUBJECTS) do
-        if subject:find(prefix, 1, true) == 1 then return kind end
+-- Everything about one mail. Returns nil if the index is empty or unreadable.
+function P.Header(i)
+    if not GetInboxHeaderInfo then return nil end
+    local _, _, sender, subject, money, cod, daysLeft, itemCount, wasRead, wasReturned,
+          textCreated, canReply, isGM = GetInboxHeaderInfo(i)
+    if sender == nil and subject == nil then return nil end
+    if IsSecret(sender) or IsSecret(subject) then return nil end
+    local h = {
+        index = i, sender = sender or "", subject = subject or "", money = money or 0, cod = cod or 0,
+        daysLeft = daysLeft, itemCount = itemCount or 0, wasRead = wasRead, wasReturned = wasReturned,
+        textCreated = textCreated, canReply = canReply, isGM = isGM,
+    }
+    h.id = table.concat({ tostring(h.sender), tostring(h.subject), tostring(h.money), tostring(h.cod),
+        tostring(h.itemCount), tostring(h.textCreated) }, "\1")
+    for kind, prefix in pairs(P.AH) do
+        if prefix ~= "" and h.subject:sub(1, #prefix) == prefix then h.auction = kind end
     end
-    return nil
+    -- player mail can be replied to; the Postmaster and other NPC mail can't
+    h.kind = h.auction or ((canReply and not isGM) and "player" or "npc")
+    -- mail you can send back to its sender, versus mail that simply disappears when it expires
+    h.returnable = (canReply and not wasReturned and not isGM and not h.auction) and true or false
+    return h
+end
+
+function P.NumMail()
+    if not GetInboxNumItems then return 0 end
+    return GetInboxNumItems() or 0
 end
 
 function P.FreeBagSlots()
     local n = 0
-    if C_Container and C_Container.GetContainerNumFreeSlots then
-        for bag = 0, 4 do
-            local free = C_Container.GetContainerNumFreeSlots(bag)
-            if type(free) == "number" then n = n + free end
-        end
-    elseif GetContainerNumFreeSlots then
-        for bag = 0, 4 do
-            local free = GetContainerNumFreeSlots(bag)
-            if type(free) == "number" then n = n + free end
-        end
+    local getFree = (C_Container and C_Container.GetContainerNumFreeSlots) or GetContainerNumFreeSlots
+    if not getFree then return 99 end
+    for bag = 0, 4 do
+        local free = getFree(bag)
+        if type(free) == "number" then n = n + free end
     end
     return n
 end
 
----------------------------------------------------------------------------
--- Wire: if the subject is empty when you send mail with gold attached, fill it in with the
--- amount so "how much did I just send" is never a mystery later.
----------------------------------------------------------------------------
-local function HookWire()
-    local subjectBox = _G.SendMailSubjectEditBox
-    local moneyFrame = _G.SendMailMoney
-    local sendButton = _G.SendMailMailButton
-    if not (subjectBox and sendButton) then return end
-    sendButton:HookScript("OnClick", function()
-        if not (P.db and P.db.wireEnabled) then return end
-        if Trim(subjectBox:GetText() or "") ~= "" then return end
-        local copper = (moneyFrame and moneyFrame.GetAmount and moneyFrame:GetAmount()) or 0
-        if type(copper) == "number" and copper > 0 and not IsSecret(copper) then
-            -- Plain gold/silver/copper text: SendMail can't use GetCoinTextureString's texture
-            -- markup as a subject line.
-            local g, s, c = math.floor(copper / 10000), math.floor((copper % 10000) / 100), copper % 100
-            local parts = {}
-            if g > 0 then parts[#parts + 1] = g .. "g" end
-            if s > 0 then parts[#parts + 1] = s .. "s" end
-            if c > 0 or #parts == 0 then parts[#parts + 1] = c .. "c" end
-            subjectBox:SetText(table.concat(parts, " "))
-        end
-    end)
+function P.CharKey()
+    local name = UnitName("player")
+    local realm = (GetNormalizedRealmName and GetNormalizedRealmName()) or (GetRealmName and GetRealmName()) or ""
+    return (name or "?") .. "-" .. (realm or ""), name, realm
 end
 
+-- which Blizzard mailbox pieces exist on this client (used by /postage probe)
+P.PROBE = {
+    "MailFrame", "InboxFrame", "MailItem1", "MailItem1Button", "InboxPrevPageButton",
+    "InboxNextPageButton", "OpenAllMail", "SendMailFrame", "SendMailNameEditBox",
+    "SendMailSubjectEditBox", "SendMailBodyEditBox", "SendMailMoney", "SendMailMailButton",
+    "OpenMailFrame", "OpenMailReplyButton",
+}
+
 ---------------------------------------------------------------------------
--- TradeBlock: decline trade requests and guild-charter signature invites while the mailbox is
--- open, so a slow-typing mass-mail session doesn't get derailed by a popup.
+-- Events
 ---------------------------------------------------------------------------
+local mailReady = false
+local function MailOpened()
+    if not mailReady then
+        mailReady = true
+        P.Fire("mailInit")      -- modules attach themselves to the Blizzard mail frames once
+    end
+    P.Fire("mailShow")
+end
+P.MailOpened = MailOpened
+
 local atMailbox = false
-local function OnTradeShow()
-    if not (P.db and P.db.tradeBlock and atMailbox) then return end
-    if CancelTrade then CancelTrade() end
-    Print("Declined a trade while the mailbox was open.")
-end
+function P.AtMailbox() return atMailbox end
 
-local function OnPetitionShow()
-    if not (P.db and P.db.tradeBlock and atMailbox) then return end
-    if ClosePetition then ClosePetition() end
-    Print("Declined a guild charter signature while the mailbox was open.")
-end
-
----------------------------------------------------------------------------
--- Boot
----------------------------------------------------------------------------
 local f = CreateFrame("Frame")
-for _, ev in ipairs({ "ADDON_LOADED", "PLAYER_LOGIN", "MAIL_SHOW", "MAIL_CLOSED", "TRADE_SHOW", "PETITION_SHOW" }) do
+for _, ev in ipairs({ "ADDON_LOADED", "PLAYER_LOGIN", "MAIL_SHOW", "MAIL_CLOSED", "MAIL_INBOX_UPDATE",
+                      "MAIL_SEND_SUCCESS", "TRADE_SHOW", "PETITION_SHOW" }) do
     pcall(f.RegisterEvent, f, ev)
 end
 
-f:SetScript("OnEvent", P.Safe("Postage", function(_, event, addon)
+f:SetScript("OnEvent", P.Safe("Postage", function(_, event, arg1)
     if event == "ADDON_LOADED" then
-        if addon ~= ADDON_NAME then return end
-        PostageDB = ApplyDefaults(PostageDB or {})
+        if arg1 ~= ADDON_NAME then return end
+        PostageDB = Merge(PostageDB or {}, P.DEFAULTS)
         P.db = PostageDB
     elseif event == "PLAYER_LOGIN" then
-        HookWire()
+        P.version = Meta("Version") or "dev"
+        local key, name, realm = P.CharKey()
+        local _, class = UnitClass("player")
+        P.db.alts[key] = { name = name, realm = realm, faction = UnitFactionGroup and UnitFactionGroup("player"), class = class }
         P.Fire("login")
+        Print(("v%s loaded. Open a mailbox, or type /postage for options."):format(tostring(P.version)))
     elseif event == "MAIL_SHOW" then
         atMailbox = true
-        P.Fire("mailShow")
+        MailOpened()
     elseif event == "MAIL_CLOSED" then
         atMailbox = false
         P.Fire("mailClosed")
+    elseif event == "MAIL_INBOX_UPDATE" then
+        P.Fire("inboxUpdate")
+    elseif event == "MAIL_SEND_SUCCESS" then
+        P.Fire("sendSuccess")
     elseif event == "TRADE_SHOW" then
-        OnTradeShow()
+        if atMailbox and P.On("tradeblock") then
+            if CancelTrade then CancelTrade() end
+            Print("Declined a trade while the mailbox was open.")
+        end
     elseif event == "PETITION_SHOW" then
-        OnPetitionShow()
+        if atMailbox and P.On("tradeblock") then
+            if ClosePetition then ClosePetition() end
+            Print("Declined a guild charter while the mailbox was open.")
+        end
     end
 end))
 
@@ -183,26 +224,36 @@ end))
 SLASH_POSTAGE1 = "/postage"
 SlashCmdList.POSTAGE = P.Safe("Postage command", function(msg)
     local cmd, rest = (msg or ""):match("^(%S*)%s*(.-)$")
-    cmd = cmd:lower()
-    if cmd == "" or cmd == "help" then
-        Print("Commands:")
-        Print("/postage tradeblock - toggle blocking trades/charters while at the mailbox")
-        Print("/postage wire - toggle auto-filling the subject with the gold amount")
-        Print("/postage freeslots <n> - always leave n bag slots open when opening mail")
-    elseif cmd == "tradeblock" then
-        P.db.tradeBlock = not P.db.tradeBlock
-        Print("Trade blocking: " .. (P.db.tradeBlock and "|cff55ff55on|r" or "|cffff5555off|r"))
-    elseif cmd == "wire" then
-        P.db.wireEnabled = not P.db.wireEnabled
-        Print("Auto-fill subject with gold amount: " .. (P.db.wireEnabled and "|cff55ff55on|r" or "|cffff5555off|r"))
+    cmd = (cmd or ""):lower()
+    if cmd == "" or cmd == "options" or cmd == "config" then
+        if P.ToggleOptions then P.ToggleOptions() end
+    elseif cmd == "help" then
+        Print("/postage - options window")
+        Print("/postage minimap - show or hide the minimap button")
+        Print("/postage freeslots <n> - keep n bag slots free when opening mail")
+        Print("/postage probe - check which mailbox parts Postage found on this client")
+        Print("In the inbox: shift-click a mail to take it, ctrl-click to return it, scroll to change pages.")
+        Print("In your bags (with Send Mail open): alt-click an item to attach it, shift-alt-click to attach all of it.")
+    elseif cmd == "minimap" then
+        P.db.minimap.show = not P.db.minimap.show
+        if P.UpdateMinimap then P.UpdateMinimap() end
+        Print("Minimap button " .. (P.db.minimap.show and "shown." or "hidden."))
     elseif cmd == "freeslots" then
         local n = tonumber(rest)
         if not n or n < 0 then
             Print("Usage: /postage freeslots <number>")
         else
             P.db.freeBagSlots = math.floor(n)
-            Print(("Will always leave %d bag slot(s) open when opening mail."):format(P.db.freeBagSlots))
+            Print(("Will keep %d bag slot(s) free when opening mail."):format(P.db.freeBagSlots))
         end
+    elseif cmd == "probe" then
+        local found, missing = {}, {}
+        for _, n in ipairs(P.PROBE) do
+            if _G[n] then found[#found + 1] = n else missing[#missing + 1] = n end
+        end
+        Print(("Found %d of %d mailbox parts."):format(#found, #P.PROBE))
+        if #missing > 0 then Print("|cffff8844Missing:|r " .. table.concat(missing, ", ")) end
+        Print(("Mail in inbox: %d   free bag slots: %d"):format(P.NumMail(), P.FreeBagSlots()))
     else
         Print("Unknown command. Type /postage help.")
     end
