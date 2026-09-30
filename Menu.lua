@@ -235,6 +235,33 @@ end)
 -- Minimap button
 ---------------------------------------------------------------------------
 local mini
+
+-- Right-click menu on the minimap button: flip any feature on or off in one click.
+local function QuickMenu(anchor)
+    local entries = { { text = "Postage settings", title = true } }
+    for _, m in ipairs(MODULES) do
+        local key, label = m[1], m[2]
+        local on = P.db.modules[key] ~= false
+        entries[#entries + 1] = {
+            text = (on and "|cff55ff55On |r  " or "|cffff5555Off|r  ") .. label,
+            func = function()
+                P.db.modules[key] = not on
+                P.Fire("options")
+                P.Print(label .. (on and " off." or " on."))
+                QuickMenu(anchor)
+            end,
+        }
+    end
+    entries[#entries + 1] = { text = "More options...", func = function() P.ToggleOptions() end }
+    entries[#entries + 1] = { text = "Hide minimap button", func = function()
+        P.db.minimap.show = false
+        P.UpdateMinimap()
+        P.Print("Minimap button hidden. /postage minimap brings it back.")
+    end }
+    P.ShowMenu(anchor, entries)
+end
+P.QuickMenu = QuickMenu
+
 local function PlaceMini()
     local a = math.rad(P.db.minimap.angle or 215)
     local r = ((Minimap and Minimap:GetWidth() or 140) / 2) + 6
@@ -260,7 +287,9 @@ local function BuildMini()
     border:SetSize(53, 53)
     border:SetPoint("TOPLEFT")
     border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
-    mini:SetScript("OnClick", function() P.ToggleOptions() end)
+    mini:SetScript("OnClick", function(self, btn)
+        if btn == "RightButton" then QuickMenu(self) else P.ToggleOptions() end
+    end)
     mini:SetScript("OnDragStart", function(self)
         self:SetScript("OnUpdate", function()
             local mx, my = Minimap:GetCenter()
@@ -274,7 +303,9 @@ local function BuildMini()
     mini:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
         GameTooltip:SetText("Postage", 1, 0.8, 0)
-        GameTooltip:AddLine("Click: options.  Drag: move.", 0.85, 0.85, 0.85)
+        GameTooltip:AddLine("Left-click: settings window.", 0.85, 0.85, 0.85)
+        GameTooltip:AddLine("Right-click: turn features on or off.", 0.85, 0.85, 0.85)
+        GameTooltip:AddLine("Drag: move this button.", 0.85, 0.85, 0.85)
         GameTooltip:AddLine("/postage minimap hides this button.", 0.6, 0.6, 0.6)
         GameTooltip:Show()
     end)

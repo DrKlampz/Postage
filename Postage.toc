@@ -1,6 +1,6 @@
 ## Interface: 16001
 ## Title: |cffffcc00Postage|r
-## Notes: Postal-style mailbox: select and open or return mail in bulk, Open All, shift/ctrl/alt-click shortcuts, a contact book, quick attach, copy and forward.
+## Notes: Mailbox upgrade: select and open or return mail in bulk, Open All, shift/ctrl/alt-click shortcuts, a contact book, quick attach, copy and forward.
 ## Author: David
 ## Version: @project-version@
 ## Category: Inventory

@@ -227,7 +227,7 @@ end
 
 local function HookExpress()
     -- Blizzard's rows call InboxFrame_OnModifiedClick for modified clicks. Wrap it so shift/ctrl
-    -- do Postal's thing and everything else falls through to Blizzard.
+    -- take or return the mail, and everything else falls through to Blizzard.
     if type(InboxFrame_OnModifiedClick) == "function" then
         local orig = InboxFrame_OnModifiedClick
         InboxFrame_OnModifiedClick = function(self, index, ...)

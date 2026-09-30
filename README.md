@@ -1,8 +1,8 @@
 # Postage
 
-A Postal-style mailbox addon for **WoW: Forever**.
+A mailbox upgrade for **WoW: Forever**.
 
-Everything Postage adds lives inside the normal mailbox, the way Postal does.
+Everything Postage adds lives inside the normal mailbox, so it looks and works like part of the game.
 
 ## Inbox
 

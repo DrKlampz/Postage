@@ -1,5 +1,5 @@
--- Postage: a Postal-style mailbox addon for WoW: Forever.
--- Everything Postage adds lives inside Blizzard's own mailbox, the way Postal does: checkboxes
+-- Postage: a mailbox addon for WoW: Forever.
+-- Everything Postage adds lives inside Blizzard's own mailbox: checkboxes
 -- on the inbox rows, Open/Return/Open All buttons, a contact book on the To: box, and so on.
 -- Core.lua holds settings, events, the slash command and shared helpers.
 local ADDON_NAME, P = ...
