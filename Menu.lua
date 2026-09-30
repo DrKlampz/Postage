@@ -49,6 +49,9 @@ function P.ShowMenu(anchor, entries)
             if e.title then
                 r.text:SetText("|cffffcc00" .. e.text .. "|r")
                 r:EnableMouse(false)
+            elseif e.note then
+                r.text:SetText("|cff888888" .. e.text .. "|r")
+                r:EnableMouse(false)
             else
                 r.text:SetText(e.text)
                 r:EnableMouse(true)

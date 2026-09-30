@@ -16,11 +16,16 @@ Everything Postage adds lives inside the normal mailbox, so it looks and works l
   over the inbox to change pages.
 - **DoNotWant.** Each mail shows how long it has left: yellow means it goes back to the sender,
   red means it will be deleted.
+- **Pending auction gold.** A readout at the top of the inbox totals auction sales whose gold
+  hasn't arrived yet, and when the next one lands. Hover it for each sale.
 
 ## Sending
 
 - **BlackBook.** A contacts button next to the To: box with your alts, people you've mailed,
-  friends and guild. Names autocomplete as you type.
+  friends and guild. Names autocomplete as you type. Your alts are listed once you've logged in
+  on each with Postage, or add one by typing its name and choosing "Add ... to Alts".
+- **Keep recipient.** Tick it to keep the name in the To: box after sending, so you can send
+  several mails to the same person.
 - **Alt-click** an item in your bags to attach it; **shift-alt-click** attaches every stack of it.
 - **QuickAttach.** Buttons beside the Send Mail frame attach all your cloth, leather, ore, herbs,
   cooking, elemental or enchanting materials in one click.

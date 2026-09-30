@@ -8,12 +8,55 @@ local ADDON_NAME, P = ...
 local MAX_ATTACH = 12
 
 local function Short(n) return (tostring(n or ""):gsub("%-.*$", "")) end
-local function MyName() return UnitName("player") end
+local function MyName() return P.PlayerName() end
 
 ---------------------------------------------------------------------------
 -- Contacts
 ---------------------------------------------------------------------------
+-- Alts saved by older versions under a first name only ("Busta"): if exactly one contact you
+-- know has that first name ("Busta Knute"), fill in the rest.
+local function FullName(first, candidates)
+    local want, found = first:lower() .. " ", nil
+    for _, n in ipairs(candidates) do
+        local s = Short(n)
+        if s:lower():sub(1, #want) == want then
+            if found and found ~= s then return nil end
+            found = s
+        end
+    end
+    return found
+end
+
+local Friends, Guild
+local function UpgradeAlts()
+    local candidates, changes
+    for key, c in pairs(P.db.alts) do
+        if c.name and not c.name:find(" ", 1, true) then
+            candidates = candidates or (function()
+                local all = {}
+                for _, n in ipairs(P.db.recent) do all[#all + 1] = n end
+                for _, n in ipairs(Friends()) do all[#all + 1] = n end
+                for _, n in ipairs(Guild()) do all[#all + 1] = n end
+                return all
+            end)()
+            local full = FullName(c.name, candidates)
+            if full then
+                changes = changes or {}
+                changes[#changes + 1] = { key, full, c }
+            end
+        end
+    end
+    -- apply after the loop: changing a table while walking it isn't allowed
+    for _, ch in ipairs(changes or {}) do
+        local key, full, c = ch[1], ch[2], ch[3]
+        P.db.alts[key] = nil
+        c.name = full
+        P.db.alts[full .. "-" .. (c.realm or "")] = c
+    end
+end
+
 local function Alts()
+    UpgradeAlts()
     local out = {}
     local _, _, myRealm = P.CharKey()
     local faction = UnitFactionGroup and UnitFactionGroup("player")
@@ -28,7 +71,7 @@ local function Alts()
     return out
 end
 
-local function Friends()
+Friends = function()
     local out = {}
     if C_FriendList and C_FriendList.GetNumFriends and C_FriendList.GetFriendInfoByIndex then
         for i = 1, C_FriendList.GetNumFriends() or 0 do
@@ -40,7 +83,7 @@ local function Friends()
     return out
 end
 
-local function Guild(limit)
+Guild = function(limit)
     local out = {}
     if not (IsInGuild and IsInGuild() and GetNumGuildMembers) then return out end
     local online, offline = {}, {}
@@ -94,14 +137,47 @@ local function BlackBookMenu(anchor)
             entries[#entries + 1] = { text = n, func = function() SetRecipient(n) end }
         end
     end
-    section("Alts", Alts())
+    -- Alts: always shown, so it's clear where they'll appear
+    local alts = Alts()
+    entries[#entries + 1] = { text = "Alts", title = true }
+    if #alts == 0 then
+        entries[#entries + 1] = { text = "Log in on each alt once to list it here", note = true }
+    end
+    for _, n in ipairs(alts) do
+        entries[#entries + 1] = { text = n, func = function() SetRecipient(n) end }
+    end
     local recent = {}
     for i = 1, math.min(8, #P.db.recent) do recent[i] = P.db.recent[i] end
     section("Recently mailed", recent)
     section("Friends", Friends())
     section("Guild", Guild(10))
-    if #entries == 0 then entries[1] = { text = "No contacts yet", title = true } end
+    -- add or remove the name in the To: box as one of your alts
+    local box = _G.SendMailNameEditBox
+    local typed = box and P.Trim(box:GetText() or "") or ""
+    if typed ~= "" and typed:lower() ~= (MyName() or ""):lower() then
+        local key = P.FindAlt(typed)
+        entries[#entries + 1] = key
+            and { text = "Remove " .. typed .. " from Alts", func = function() P.db.alts[key] = nil P.Print(typed .. " removed from your alts.") end }
+            or { text = "Add " .. typed .. " to Alts", func = function() P.AddAlt(typed) P.Print(typed .. " added to your alts.") end }
+    end
     P.ShowMenu(anchor, entries)
+end
+
+-- alts added by hand (for characters that haven't logged in with Postage yet)
+function P.FindAlt(name)
+    local want = Short(name):lower()
+    for key, c in pairs(P.db.alts) do
+        if c.name and c.name:lower() == want then return key end
+    end
+end
+
+function P.AddAlt(name)
+    local _, _, realm = P.CharKey()
+    local n = Short(name)
+    n = n:sub(1, 1):upper() .. n:sub(2)
+    P.db.alts[n .. "-" .. (realm or "")] = {
+        name = n, realm = realm, faction = UnitFactionGroup and UnitFactionGroup("player"), manual = true,
+    }
 end
 
 -- remember who you mail
@@ -113,6 +189,16 @@ P.AddHook("sendSuccess", function()
     if not pendingTo or pendingTo == "" then return end
     local name = pendingTo
     pendingTo = nil
+    -- Keep recipient: Blizzard clears the form after a send; put the name back afterwards
+    if P.db.keepRecipient then
+        local function restore()
+            local box = _G.SendMailNameEditBox
+            if box and P.Trim(box:GetText() or "") == "" then box:SetText(name) end
+        end
+        restore()
+        C_Timer.After(0, restore)
+        C_Timer.After(0.2, restore)
+    end
     local recent = P.db.recent
     for i = #recent, 1, -1 do if recent[i]:lower() == name:lower() then table.remove(recent, i) end end
     table.insert(recent, 1, name)
@@ -267,6 +353,35 @@ local function Build()
         end)
     end
 
+    -- Keep recipient checkbox, above the Send Money / C.O.D. choice
+    if sf then
+        local cb = CreateFrame("CheckButton", "PostageKeepRecipient", sf, "UICheckButtonTemplate")
+        cb:SetSize(20, 20)
+        if cb.text then cb.text:SetText("") end
+        if cb.Text then cb.Text:SetText("") end
+        local radio = _G.SendMailSendMoneyButton
+        if radio then
+            cb:SetPoint("BOTTOMLEFT", radio, "TOPLEFT", -2, 2)
+        elseif _G.SendMailMoney then
+            cb:SetPoint("BOTTOMLEFT", _G.SendMailMoney, "TOPRIGHT", 34, 4)
+        else
+            cb:SetPoint("BOTTOMRIGHT", sf, "BOTTOMRIGHT", -110, 100)
+        end
+        local label = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        label:SetPoint("LEFT", cb, "RIGHT", 1, 0)
+        label:SetText("Keep recipient")
+        cb:SetHitRectInsets(0, -80, 0, 0)
+        cb:SetScript("OnClick", function(self) P.db.keepRecipient = self:GetChecked() and true or false end)
+        cb:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_TOP")
+            GameTooltip:SetText("Keep recipient", 1, 1, 1)
+            GameTooltip:AddLine("Keep the name in the To: box after sending, so you can send several mails to the same person.", 0.85, 0.85, 0.85, true)
+            GameTooltip:Show()
+        end)
+        cb:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        ui.keep = cb
+    end
+
     -- Wire
     local send = _G.SendMailMailButton
     if send then
@@ -311,6 +426,7 @@ local function Build()
 end
 
 local function Refresh()
+    if ui.keep then ui.keep:SetChecked(P.db.keepRecipient and true or false) end
     if ui.blackbook then ui.blackbook:SetShown(P.On("blackbook")) end
     if ui.quick then for _, b in ipairs(ui.quick) do b:SetShown(P.On("quickattach")) end end
 end

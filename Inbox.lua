@@ -181,6 +181,46 @@ local function CheckedIDs()
 end
 
 ---------------------------------------------------------------------------
+-- Pending auction gold: when an auction sells, a "Sale Pending" invoice arrives straight away
+-- and the gold follows about an hour later. Total what's still on its way.
+---------------------------------------------------------------------------
+local function MinutesUntil(etaHour, etaMin)
+    if type(etaHour) ~= "number" or type(etaMin) ~= "number" or not GetGameTime then return nil end
+    local h, m = GetGameTime()
+    if type(h) ~= "number" then return nil end
+    return ((etaHour * 60 + etaMin) - (h * 60 + m)) % 1440
+end
+
+function P.PendingSales()
+    local total, list = 0, {}
+    if not GetInboxInvoiceInfo then return total, list end
+    for i = 1, P.NumMail() do
+        local ok, kind, item, buyer, bid, _, deposit, cut, _, etaHour, etaMin, count = pcall(GetInboxInvoiceInfo, i)
+        if ok and kind == "seller_temp_invoice" and type(bid) == "number" and not P.IsSecret(bid) then
+            local net = bid + (tonumber(deposit) or 0) - (tonumber(cut) or 0)
+            total = total + net
+            list[#list + 1] = { item = item, count = count, buyer = buyer, net = net, mins = MinutesUntil(etaHour, etaMin) }
+        end
+    end
+    table.sort(list, function(a, b) return (a.mins or 9999) < (b.mins or 9999) end)
+    return total, list
+end
+
+local function UpdatePending()
+    local fs = buttons.pending
+    if not fs then return end
+    local total, list = P.PendingSales()
+    if total > 0 then
+        local soon = list[1] and list[1].mins
+        fs.text:SetText("|cffffcc00AH pending:|r " .. P.MoneyText(total) .. (soon and ("  |cff888888next in " .. soon .. "m|r") or ""))
+    else
+        fs.text:SetText("|cff888888AH pending: none|r")
+    end
+    fs.list = list
+end
+P.UpdatePending = UpdatePending
+
+---------------------------------------------------------------------------
 -- Drawing the rows
 ---------------------------------------------------------------------------
 local function CountChecked()
@@ -198,6 +238,7 @@ local function UpdateButtons()
         buttons.ret:SetShown(P.On("select"))
     end
     if buttons.all then buttons.all:SetShown(P.On("openall")) end
+    UpdatePending()
     if _G.OpenAllMail and P.On("openall") then pcall(_G.OpenAllMail.Hide, _G.OpenAllMail) end
 end
 
@@ -382,6 +423,30 @@ local function Build()
         buttons.open:SetPoint("TOPLEFT", inbox, "TOPLEFT", 60, -58)
     end
     buttons.ret:SetPoint("LEFT", buttons.open, "RIGHT", 6, 0)
+    -- pending auction gold, to the right of Return
+    local pend = CreateFrame("Frame", nil, inbox)
+    pend:SetSize(120, 22)
+    pend:SetPoint("LEFT", buttons.ret, "RIGHT", 8, 0)
+    pend.text = pend:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    pend.text:SetPoint("LEFT")
+    pend.text:SetJustifyH("LEFT")
+    pend:EnableMouse(true)
+    pend:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+        GameTooltip:SetText("Auction gold on its way", 1, 1, 1)
+        if not self.list or #self.list == 0 then
+            GameTooltip:AddLine("Nothing pending. When an auction sells, the gold arrives about an hour later and shows here until then.", 0.85, 0.85, 0.85, true)
+        else
+            for _, s in ipairs(self.list) do
+                local name = (s.item or "?") .. ((s.count and s.count > 1) and (" x" .. s.count) or "")
+                GameTooltip:AddDoubleLine(name, P.MoneyText(s.net) .. (s.mins and ("  |cff888888" .. s.mins .. "m|r") or ""), 0.9, 0.9, 0.9, 1, 1, 1)
+            end
+        end
+        GameTooltip:Show()
+    end)
+    pend:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    buttons.pending = pend
+
     -- Open All takes the place of Blizzard's button, or sits between the page buttons
     local blizzAll = _G.OpenAllMail
     if blizzAll then

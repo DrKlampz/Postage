@@ -31,6 +31,7 @@ P.DEFAULTS = {
     freeBagSlots = 0,
     minimap = { show = true, angle = 215 },
     autocomplete = true,
+    keepRecipient = false,  -- keep the To: name after sending, for sending several mails
     recent = {},     -- recently mailed names, newest first
     alts = {},       -- ["Name-Realm"] = { name, realm, faction, class }
 }
@@ -147,8 +148,22 @@ function P.FreeBagSlots()
     return n
 end
 
+-- Your character's full name. On Forever, UnitName("player") returns a two-part name as two
+-- values ("Busta", "Knute") in the slot retail uses for the realm, so join them back up.
+-- Anything that is actually the realm is ignored.
+function P.PlayerName()
+    local first, second = UnitName("player")
+    if type(first) ~= "string" or IsSecret(first) then return nil end
+    if type(second) == "string" and second ~= "" and not IsSecret(second) and not first:find(" ", 1, true) then
+        local realm = GetRealmName and GetRealmName()
+        local nrealm = GetNormalizedRealmName and GetNormalizedRealmName()
+        if second ~= realm and second ~= nrealm then return first .. " " .. second end
+    end
+    return first
+end
+
 function P.CharKey()
-    local name = UnitName("player")
+    local name = P.PlayerName()
     local realm = (GetNormalizedRealmName and GetNormalizedRealmName()) or (GetRealmName and GetRealmName()) or ""
     return (name or "?") .. "-" .. (realm or ""), name, realm
 end
@@ -192,6 +207,9 @@ f:SetScript("OnEvent", P.Safe("Postage", function(_, event, arg1)
         P.version = Meta("Version") or "dev"
         local key, name, realm = P.CharKey()
         local _, class = UnitClass("player")
+        -- earlier versions saved this character under its first name only; drop that entry
+        local first = UnitName("player")
+        if type(first) == "string" and first ~= name then P.db.alts[first .. "-" .. (realm or "")] = nil end
         P.db.alts[key] = { name = name, realm = realm, faction = UnitFactionGroup and UnitFactionGroup("player"), class = class }
         P.Fire("login")
         Print(("v%s loaded. Open a mailbox, or type /postage for options."):format(tostring(P.version)))
@@ -254,6 +272,10 @@ SlashCmdList.POSTAGE = P.Safe("Postage command", function(msg)
         Print(("Found %d of %d mailbox parts."):format(#found, #P.PROBE))
         if #missing > 0 then Print("|cffff8844Missing:|r " .. table.concat(missing, ", ")) end
         Print(("Mail in inbox: %d   free bag slots: %d"):format(P.NumMail(), P.FreeBagSlots()))
+        if P.PendingSales then
+            local total, list = P.PendingSales()
+            Print(("Pending auction sales: %d (%s)"):format(#list, P.MoneyText(total)))
+        end
         if P.PageButtons then
             local prev, nxt = P.PageButtons()
             Print(("Page buttons: %s   InboxFrame_Update: %s   row index: %s   page number: %s"):format(
