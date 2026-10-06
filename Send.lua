@@ -294,6 +294,7 @@ local QUICK = {
     { "Herbs", 9, "Interface\\Icons\\INV_Misc_Herb_07" },
     { "Elemental", 10, "Interface\\Icons\\INV_Elemental_Primal_Fire" },
     { "Enchanting", 12, "Interface\\Icons\\INV_Enchant_DustStrange" },
+    { "Engineering (parts, explosives, devices)", { 1, 2, 3 }, "Interface\\Icons\\INV_Misc_Gear_01" },
     { "All trade goods", nil, "Interface\\Icons\\INV_Misc_Bag_10" },
 }
 
@@ -308,7 +309,13 @@ function P.QuickAttach(sub)
     if not EnsureSendTab() then P.Print("Open the Send Mail tab first.") return 0 end
     local n = P.AttachWhere(function(id)
         local c, s = ClassOf(id)
-        return c == 7 and (sub == nil or s == sub)
+        if c ~= 7 then return false end
+        if sub == nil then return true end
+        if type(sub) == "table" then
+            for _, v in ipairs(sub) do if s == v then return true end end
+            return false
+        end
+        return s == sub
     end)
     P.Print(n > 0 and ("Attached %d stack(s)."):format(n) or "Nothing of that kind in your bags.")
     return n

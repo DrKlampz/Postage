@@ -84,7 +84,6 @@ end
 local function Build()
     local of = _G.OpenMailFrame
     if not of then return end
-    local reply = _G.OpenMailReplyButton
     local function Btn(text, onClick)
         local b = CreateFrame("Button", nil, of, "UIPanelButtonTemplate")
         b:SetSize(70, 22)
@@ -94,12 +93,19 @@ local function Build()
     end
     ui.forward = Btn("Forward", P.ForwardOpenMail)
     ui.copy = Btn("Copy", P.CopyOpenMail)
-    if reply then
-        ui.forward:SetPoint("BOTTOMRIGHT", reply, "TOPRIGHT", 0, 4)
-    else
-        ui.forward:SetPoint("BOTTOMRIGHT", of, "BOTTOMRIGHT", -12, 44)
+    -- Tucked under the Report Player button, in the header: always visible, never over the
+    -- attachments or the Reply/Return/Close row.
+    local anchor = _G.OpenMailReportSpamButton
+    for _, b in pairs({ui.forward, ui.copy}) do
+        b:SetSize(58, 20)
+        b:SetFrameLevel((of:GetFrameLevel() or 1) + 10)
     end
-    ui.copy:SetPoint("RIGHT", ui.forward, "LEFT", -4, 0)
+    if anchor and anchor.GetObjectType then
+        ui.forward:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT", 0, -4)
+    else
+        ui.forward:SetPoint("TOPRIGHT", of, "TOPRIGHT", -16, -66)
+    end
+    ui.copy:SetPoint("RIGHT", ui.forward, "LEFT", -2, 0)
 end
 
 local function Refresh()
