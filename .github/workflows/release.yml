@@ -1,5 +1,6 @@
 name: Package and Release
 on:
+  workflow_dispatch:
   push:
     tags:
       - "**"
@@ -15,7 +16,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Package and release
+        if: github.event_name == 'push'
         uses: BigWigsMods/packager@v2
         env:
           GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
           WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN || secrets.WAGO_API_KEY || secrets.KEY }}
+
+      - name: Post to Discord
+        if: success()
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_MODE: ${{ github.event_name == 'workflow_dispatch' && 'intro' || 'release' }}
+        run: bash .github/discord-notify.sh
