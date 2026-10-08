@@ -20,10 +20,8 @@ local function Meta(field)
 end
 
 P.DEFAULTS = {
-    modules = {
-        select = true, openall = true, express = true, blackbook = true, donotwant = true,
-        carboncopy = true, forward = true, quickattach = true, wire = true, tradeblock = true,
-    },
+    modules = { express = true, tradeblock = true },   -- everything else is always on
+    look = { preset = "gold", alpha = 0.96, menuSize = "normal" },
     openAll = {
         ahSold = true, ahExpired = true, ahOutbid = true, ahWon = true, ahCancelled = true,
         npc = true, player = true,
@@ -65,7 +63,12 @@ function P.Safe(what, fn)
     end
 end
 
-function P.On(mod) return P.db ~= nil and P.db.modules[mod] ~= false end
+local SWITCHES = { express = true, tradeblock = true }
+function P.On(mod)
+    if not P.db then return false end
+    if SWITCHES[mod] then return P.db.modules[mod] ~= false end
+    return true
+end
 
 -- tiny event bus between the modules
 local hooks = {}

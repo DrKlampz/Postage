@@ -130,6 +130,19 @@ end
 
 local function BlackBookMenu(anchor)
     local entries = {}
+    local seen = { [(MyName() or ""):lower()] = true }     -- a name shows once, in the first section that has it
+    local function fresh(list, limit)
+        local out = {}
+        for _, n in ipairs(list) do
+            local k = Short(n):lower()
+            if not seen[k] then
+                seen[k] = true
+                out[#out + 1] = n
+                if limit and #out >= limit then break end
+            end
+        end
+        return out
+    end
     local function section(title, list)
         if #list == 0 then return end
         entries[#entries + 1] = { text = title, title = true }
@@ -138,7 +151,7 @@ local function BlackBookMenu(anchor)
         end
     end
     -- Alts: always shown, so it's clear where they'll appear
-    local alts = Alts()
+    local alts = fresh(Alts())
     entries[#entries + 1] = { text = "Alts", title = true }
     if #alts == 0 then
         entries[#entries + 1] = { text = "Log in on each alt once to list it here", note = true }
@@ -146,11 +159,9 @@ local function BlackBookMenu(anchor)
     for _, n in ipairs(alts) do
         entries[#entries + 1] = { text = n, func = function() SetRecipient(n) end }
     end
-    local recent = {}
-    for i = 1, math.min(8, #P.db.recent) do recent[i] = P.db.recent[i] end
-    section("Recently mailed", recent)
-    section("Friends", Friends())
-    section("Guild", Guild(10))
+    section("Recently mailed", fresh(P.db.recent, 8))
+    section("Friends", fresh(Friends()))
+    section("Guild", fresh(Guild(), 10))
     -- add or remove the name in the To: box as one of your alts
     local box = _G.SendMailNameEditBox
     local typed = box and P.Trim(box:GetText() or "") or ""
