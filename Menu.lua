@@ -38,6 +38,7 @@ local function Style(frame, look)
 end
 local menu, opts
 function P.ApplyLook()
+    if P.SkinMail then P.SkinMail() end
     local look = P.Look()
     Style(menu, look)
     if opts then
@@ -189,7 +190,7 @@ end
 
 local function BuildOptions()
     opts = CreateFrame("Frame", "PostageOptionsFrame", UIParent, "BackdropTemplate")
-    opts:SetSize(410, 440)
+    opts:SetSize(410, 470)
     opts:SetPoint("CENTER")
     opts:SetFrameStrata("DIALOG")
     opts:SetToplevel(true)
@@ -255,8 +256,11 @@ local function BuildOptions()
             function(v) P.db.modules[key] = v end)
         AddCheck(cb, 210, -188 - (i - 1) * 24)
     end
+    local sk = Check(opts, "Apply the theme to the mailbox", "Paints the game's inbox, send mail and open mail windows with the theme below.",
+        function() return P.db.skinMail ~= false end, function(v) P.db.skinMail = v P.SkinMail() end)
+    AddCheck(sk, 210, -236)
     local fl = opts:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    fl:SetPoint("TOPLEFT", 16, -244)
+    fl:SetPoint("TOPLEFT", 16, -262)
     fl:SetText("Keep this many bag slots free when opening mail:")
     opts.texts[#opts.texts + 1] = fl
     local eb = CreateFrame("EditBox", nil, opts, "InputBoxTemplate")
@@ -275,7 +279,7 @@ local function BuildOptions()
     opts.free = eb
 
     -- Appearance
-    Header("Appearance", -278)
+    Header("Appearance", -292)
     local function DropButton(x, y, w, label, makeEntries)
         local fs = opts:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         fs:SetPoint("TOPLEFT", x, y - 5)
@@ -287,7 +291,7 @@ local function BuildOptions()
         b:SetScript("OnClick", function(self) P.ShowMenu(self, makeEntries()) end)
         return b
     end
-    opts.themeBtn = DropButton(14, -298, 120, "Theme", function()
+    opts.themeBtn = DropButton(14, -312, 120, "Theme", function()
         local e = {}
         for _, id in ipairs(PRESET_ORDER) do
             e[#e + 1] = { text = PRESETS[id].name, func = function()
@@ -298,7 +302,7 @@ local function BuildOptions()
         end
         return e
     end)
-    opts.sizeBtn = DropButton(210, -298, 100, "Lists", function()
+    opts.sizeBtn = DropButton(210, -312, 100, "Lists", function()
         local e = {}
         for _, id in ipairs(SIZE_ORDER) do
             e[#e + 1] = { text = SIZES[id].name .. " text", func = function() P.db.look.menuSize = id P.ApplyLook() end }
@@ -322,12 +326,12 @@ local function BuildOptions()
         sw:SetScript("OnClick", function() PickColor(key, P.ApplyLook) end)
         opts.swatches[#opts.swatches + 1] = sw
     end
-    Swatch(16, -332, "Background", "bg")
-    Swatch(150, -332, "Border", "edge")
-    Swatch(270, -332, "Headings", "accent")
+    Swatch(16, -346, "Background", "bg")
+    Swatch(150, -346, "Border", "edge")
+    Swatch(270, -346, "Headings", "accent")
 
     local sl = CreateFrame("Slider", "PostageOpacitySlider", opts, "OptionsSliderTemplate")
-    sl:SetPoint("TOPLEFT", 16, -374)
+    sl:SetPoint("TOPLEFT", 16, -388)
     sl:SetWidth(200)
     sl:SetMinMaxValues(0.3, 1)
     sl:SetValueStep(0.05)
@@ -371,29 +375,89 @@ function P.ToggleOptions()
 end
 
 ---------------------------------------------------------------------------
--- The Postage button on the mailbox
+-- Mailbox skin: the theme also paints the game's mailbox windows (inbox, send mail, open mail)
 ---------------------------------------------------------------------------
-P.AddHook("mailInit", function()
-    local mf = _G.MailFrame
-    if not mf then return end
-    local b = CreateFrame("Button", "PostageMailButton", mf, "UIPanelButtonTemplate")
-    b:SetSize(72, 20)
-    b:SetText("Postage")
-    local closeBtn = mf.CloseButton or _G.MailFrameCloseButton
-    if closeBtn then
-        b:SetPoint("RIGHT", closeBtn, "LEFT", -2, 0)
-    else
-        b:SetPoint("TOPRIGHT", mf, "TOPRIGHT", -28, -4)
+local stripped = setmetatable({}, { __mode = "k" })
+local STRIP_KEYS = { "Bg", "NineSlice", "Inset", "InsetBg", "TopTileStreaks", "TitleBg", "PortraitContainer", "TopBorder",
+    "BottomBorder", "LeftBorder", "RightBorder", "Background" }
+local function StripOne(region, on)
+    if not (region and region.SetAlpha) then return end
+    if on then
+        if stripped[region] == nil then stripped[region] = region:GetAlpha() end
+        region:SetAlpha(0)
+    elseif stripped[region] ~= nil then
+        region:SetAlpha(stripped[region])
+        stripped[region] = nil
     end
-    b:SetFrameLevel(mf:GetFrameLevel() + 10)
-    b:SetScript("OnClick", function() P.ToggleOptions() end)
-    b:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-        GameTooltip:SetText("Postage options", 1, 1, 1)
-        GameTooltip:Show()
+end
+local function StripFrame(f, on)
+    pcall(function()
+        for _, r in ipairs({ f:GetRegions() }) do
+            if r.IsObjectType and r:IsObjectType("Texture") then StripOne(r, on) end
+        end
+        for _, k in ipairs(STRIP_KEYS) do
+            local o = f[k]
+            if o and o.SetAlpha then StripOne(o, on) end
+        end
+        local gi = _G[(f:GetName() or "") .. "Inset"]
+        if gi then StripOne(gi, on) end
     end)
-    b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+end
+
+local function SkinFrame(f, key)
+    if not f then return end
+    local on = P.db.skinMail ~= false
+    local skin = P[key]
+    if on and not skin then
+        skin = CreateFrame("Frame", nil, f, "BackdropTemplate")
+        skin:SetAllPoints(f)
+        skin:SetFrameLevel(math.max(0, (f:GetFrameLevel() or 1)))
+        if skin.SetBackdrop then
+            skin:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+        end
+        P[key] = skin
+    end
+    if not skin then return end
+    skin:SetShown(on)
+    StripFrame(f, on)
+    if on then
+        local look = P.Look()
+        Style(skin, look)
+        local t = f.TitleText or _G[(f:GetName() or "") .. "TitleText"]
+        if t and t.SetTextColor then t:SetTextColor(look.accent[1], look.accent[2], look.accent[3]) end
+    end
+end
+
+function P.SkinMail()
+    pcall(SkinFrame, _G.MailFrame, "mailSkin")
+    pcall(SkinFrame, _G.OpenMailFrame, "openSkin")
+end
+P.AddHook("mailInit", P.SkinMail)
+P.AddHook("mailShow", P.SkinMail)
+
+-- Settings panel in the game's Options > AddOns, and the addon compartment, so the options
+-- window is reachable without a button on the mailbox.
+P.AddHook("login", function()
+    local panel = CreateFrame("Frame")
+    panel.name = "Postage"
+    local t = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    t:SetPoint("TOPLEFT", 16, -16)
+    t:SetText("Postage")
+    local b = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    b:SetSize(180, 24)
+    b:SetPoint("TOPLEFT", 16, -52)
+    b:SetText("Open Postage options")
+    b:SetScript("OnClick", function() P.ToggleOptions() end)
+    pcall(function()
+        if Settings and Settings.RegisterCanvasLayoutCategory then
+            local cat = Settings.RegisterCanvasLayoutCategory(panel, "Postage")
+            Settings.RegisterAddOnCategory(cat)
+        elseif InterfaceOptions_AddCategory then
+            InterfaceOptions_AddCategory(panel)
+        end
+    end)
 end)
+function Postage_OnAddonCompartmentClick() P.ToggleOptions() end
 
 ---------------------------------------------------------------------------
 -- Minimap button

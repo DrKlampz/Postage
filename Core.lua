@@ -21,6 +21,7 @@ end
 
 P.DEFAULTS = {
     modules = { express = true, tradeblock = true },   -- everything else is always on
+    skinMail = true,   -- paint the mailbox windows with the theme
     look = { preset = "gold", alpha = 0.96, menuSize = "normal" },
     openAll = {
         ahSold = true, ahExpired = true, ahOutbid = true, ahWon = true, ahCancelled = true,

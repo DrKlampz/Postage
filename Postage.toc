@@ -5,6 +5,7 @@
 ## Version: @project-version@
 ## Category: Inventory
 ## IconTexture: Interface\Icons\INV_Letter_15
+## AddonCompartmentFunc: Postage_OnAddonCompartmentClick
 ## SavedVariables: PostageDB
 ## X-License: MIT
 ## X-Wago-ID: RNL444No
