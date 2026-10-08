@@ -7,6 +7,7 @@
 ## IconTexture: Interface\Icons\INV_Letter_15
 ## SavedVariables: PostageDB
 ## X-License: MIT
+## X-Wago-ID: RNL444No
 
 Core.lua
 Menu.lua
