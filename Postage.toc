@@ -4,7 +4,7 @@
 ## Author: David
 ## Version: @project-version@
 ## Category: Inventory
-## IconTexture: Interface\AddOns\Postage\Media\Icon
+## IconTexture: Interface\Icons\INV_Letter_15
 ## AddonCompartmentFunc: Postage_OnAddonCompartmentClick
 ## SavedVariables: PostageDB
 ## X-License: MIT
