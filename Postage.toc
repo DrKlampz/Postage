@@ -1,10 +1,10 @@
 ## Interface: 16001
 ## Title: |cffffcc00Postage|r
-## Notes: Mailbox upgrade: select and open or return mail in bulk, Open All, shift/ctrl/alt-click shortcuts, a contact book, quick attach, copy and forward.
+## Notes: Mailbox upgrade for WoW Forever: select and open or return mail in bulk, Open All, shift/ctrl/alt-click shortcuts, a contact book, quick attach, copy and forward, and themes that match the mailbox.
 ## Author: David
 ## Version: @project-version@
 ## Category: Inventory
-## IconTexture: Interface\Icons\INV_Letter_15
+## IconTexture: Interface\AddOns\Postage\Media\Icon
 ## AddonCompartmentFunc: Postage_OnAddonCompartmentClick
 ## SavedVariables: PostageDB
 ## X-License: MIT

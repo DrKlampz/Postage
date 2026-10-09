@@ -39,8 +39,10 @@ Everything Postage adds lives inside the normal mailbox, so it looks and works l
 ## Other
 
 - **TradeBlock** declines trades and guild charters while the mailbox is open.
-- A **Postage** button on the mailbox and a **minimap button** open the options, where every
-  feature can be turned off.
+- **Themes.** Pick a look (colors, opacity, list size) for Postage's windows, and optionally paint the
+  game's inbox, send mail and open mail windows to match.
+- A **minimap button**, the game's **Settings > AddOns** panel and the addon list entry open the options,
+  where every feature can be turned off.
 
 ## Commands
 
