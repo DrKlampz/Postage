@@ -302,7 +302,8 @@ local QUICK = {
     { "Tailoring: cloth", 5, "Interface\\Icons\\INV_Fabric_Linen_01" },
     { "Leatherworking / Skinning: leather", 6, "Interface\\Icons\\INV_Misc_LeatherScrap_03" },
     { "Mining / Blacksmithing: ore, bars, stone", 7, "Interface\\Icons\\INV_Ore_Copper_01" },
-    { "Cooking / Fishing: meat and fish", 8, "Interface\\Icons\\INV_Misc_Food_15" },
+    { "Fishing: fish and shellfish", 8, "Interface\\Icons\\INV_Misc_Fish_02", 7, "fish" },
+    { "Cooking: meat and fish", 8, "Interface\\Icons\\INV_Misc_Food_15" },
     { "Herbalism / Alchemy: herbs", 9, "Interface\\Icons\\INV_Misc_Herb_07" },
     { "Elemental: motes, essences, primals", 10, "Interface\\Icons\\INV_Elemental_Primal_Fire" },
     { "Enchanting: dust, essences, shards", 12, "Interface\\Icons\\INV_Enchant_DustStrange" },
@@ -320,11 +321,24 @@ local function ClassOf(itemID)
     end
 end
 
-function P.QuickAttach(sub, class)
+-- words that make a Trade Goods "meat" item a fish (fish are filed together with meat on this client)
+local FISH_WORDS = { "fish", "mackerel", "catfish", "salmon", "snapper", "eel", "squid", "lobster", "trout", "bass",
+    "tuna", "sturgeon", "mightfish", "blackmouth", "clam", "crab", "whisker", "oyster", "shrimp", "pike",
+    "stonescale", "firefin", "nightfin", "angler", "herring", "sardine", "minnow", "flounder", "grouper" }
+local function IsFish(id)
+    local name = (C_Item and C_Item.GetItemInfo and C_Item.GetItemInfo(id)) or (GetItemInfo and GetItemInfo(id))
+    if type(name) ~= "string" then return false end
+    name = name:lower()
+    for _, w in ipairs(FISH_WORDS) do if name:find(w, 1, true) then return true end end
+    return false
+end
+
+function P.QuickAttach(sub, class, only)
     if not EnsureSendTab() then P.Print("Open the Send Mail tab first.") return 0 end
     local n = P.AttachWhere(function(id)
         local c, s = ClassOf(id)
         if c ~= (class or 7) then return false end
+        if only == "fish" and not IsFish(id) then return false end
         if sub == nil then return true end
         if type(sub) == "table" then
             for _, v in ipairs(sub) do if s == v then return true end end
@@ -460,7 +474,7 @@ local function Build()
             b:SetPoint("TOPLEFT", sf, "TOPRIGHT", 2 + math.floor((i - 1) / 7) * 30, -60 - ((i - 1) % 7) * 30)
             b:SetNormalTexture(q[3])
             b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
-            b:SetScript("OnClick", function() P.QuickAttach(q[2], q[4]) end)
+            b:SetScript("OnClick", function() P.QuickAttach(q[2], q[4], q[5]) end)
             b:SetScript("OnEnter", function(self)
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 GameTooltip:SetText("Attach all: " .. q[1], 1, 1, 1)
