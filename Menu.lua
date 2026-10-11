@@ -32,7 +32,7 @@ function P.Look()
 end
 local function Hex(c) return ("|cff%02x%02x%02x"):format(math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5)) end
 local function Style(frame, look)
-    if not (frame and frame.SetBackdrop) then return end
+    if not (frame and frame.SetBackdrop) or frame.lookStrip then return end
     frame:SetBackdropColor(look.bg[1], look.bg[2], look.bg[3], look.alpha)
     frame:SetBackdropBorderColor(look.edge[1], look.edge[2], look.edge[3], 0.95)
 end
@@ -62,6 +62,7 @@ local MAX_ROWS = 30
 local function BuildMenu()
     menu = CreateFrame("Frame", "PostagePopupMenu", UIParent, "BackdropTemplate")
     menu:SetFrameStrata("FULLSCREEN_DIALOG")
+    if P.WinLook then P.WinLook.Attach("menu", menu) end
     menu:SetClampedToScreen(true)
     menu:EnableMouse(true)
     if menu.SetBackdrop then
@@ -191,6 +192,7 @@ end
 local function BuildOptions()
     opts = CreateFrame("Frame", "PostageOptionsFrame", UIParent, "BackdropTemplate")
     opts:SetSize(410, 470)
+    if P.WinLook then P.WinLook.Attach("options", opts) end
     opts:SetPoint("CENTER")
     opts:SetFrameStrata("DIALOG")
     opts:SetToplevel(true)

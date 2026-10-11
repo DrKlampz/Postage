@@ -11,6 +11,8 @@
 ## X-Wago-ID: RNL444No
 
 Core.lua
+Look.lua
+LookSetup.lua
 Menu.lua
 Inbox.lua
 Send.lua
