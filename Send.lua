@@ -576,7 +576,17 @@ local function ApplyPaper(id)
     end
 end
 
+local function ApplySlots()
+    local s = P.WinLook and P.WinLook.Get and P.WinLook.Get("mail")
+    local sc = s and tonumber(s.slotScale) or 1
+    for i = 1, 12 do
+        local b = _G["SendMailAttachment" .. i]
+        if b and b.SetScale then b:SetScale(sc) end
+    end
+end
+
 function P.ApplyMailLook()
+    pcall(ApplySlots)
     pcall(ApplyPaper, "mail")
     pcall(ApplyPaper, "openmail")
     if P.SkinMail then P.SkinMail() end

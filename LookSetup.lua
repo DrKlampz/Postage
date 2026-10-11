@@ -8,7 +8,7 @@ local PAPER_ORDER = { "original", "tint", "dark", "hidden" }
 -- the extra mailbox options: the letter paper, and the quick-attach tray
 local function MailExtra()
     local defaults = {
-        paper = "original", paperColor = { 0.10, 0.10, 0.13 }, paperAlpha = 1,
+        paper = "original", paperColor = { 0.10, 0.10, 0.13 }, paperAlpha = 1, slotScale = 1,
         tray = true, traySide = "right", trayCols = 3, traySize = 28, trayGap = 4,
         trayPanel = true, trayTitle = true, trayCounts = true, trayHideEmpty = false, trayAlpha = 0.96,
     }
@@ -24,6 +24,9 @@ local function MailExtra()
                 { key = "paper", kind = "cycle", label = "Paper", values = PAPER_ORDER, names = PAPER_NAMES },
                 { key = "paperColor", kind = "color", label = "Paper color (for the plain paper)" },
                 { key = "paperAlpha", kind = "slider", label = "Paper opacity", min = 0, max = 1, step = 0.05, fmt = "%.2f" },
+            } },
+            { id = "slots", title = "Attachment slots", rows = {
+                { key = "slotScale", kind = "slider", label = "Size of the item slots", min = 0.7, max = 1.2, step = 0.05, fmt = "%.2f" },
             } },
             { id = "tray", title = "Quick-attach tray", rows = {
                 { key = "tray", kind = "check", label = "Show the tray next to the Send Mail window" },
