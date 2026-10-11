@@ -297,22 +297,7 @@ end
 -- standard ones and haven't been checked against a Forever client yet, so "All trade goods"
 -- is there as a catch-all.
 ---------------------------------------------------------------------------
--- { label, subclass(es) or nil for all, icon, item class (default 7 = trade goods) }
-local QUICK = {
-    { "Tailoring: cloth", 5, "Interface\\Icons\\INV_Fabric_Linen_01" },
-    { "Leatherworking / Skinning: leather", 6, "Interface\\Icons\\INV_Misc_LeatherScrap_03" },
-    { "Mining / Blacksmithing: ore, bars, stone", 7, "Interface\\Icons\\INV_Ore_Copper_01" },
-    { "Fishing: fish and shellfish", 8, "Interface\\Icons\\INV_Misc_Fish_02", 7, "fish" },
-    { "Cooking: meat and fish", 8, "Interface\\Icons\\INV_Misc_Food_15" },
-    { "Herbalism / Alchemy: herbs", 9, "Interface\\Icons\\INV_Misc_Herb_07" },
-    { "Elemental: motes, essences, primals", 10, "Interface\\Icons\\INV_Elemental_Primal_Fire" },
-    { "Enchanting: dust, essences, shards", 12, "Interface\\Icons\\INV_Enchant_DustStrange" },
-    { "Engineering: parts, explosives, devices", { 1, 2, 3 }, "Interface\\Icons\\INV_Misc_Gear_01" },
-    { "Alchemy: potions, elixirs, flasks", { 1, 2, 3 }, "Interface\\Icons\\INV_Potion_54", 0 },
-    { "First Aid: bandages", 7, "Interface\\Icons\\INV_Misc_Bandage_15", 0 },
-    { "Other trade goods", 11, "Interface\\Icons\\INV_Misc_Rune_01" },
-    { "All trade goods", nil, "Interface\\Icons\\INV_Misc_Bag_10" },
-}
+-- Each button: { label, icon, test(id, class, subclass, lowercase name) }
 
 local function ClassOf(itemID)
     if C_Item and C_Item.GetItemInfoInstant then
@@ -321,30 +306,70 @@ local function ClassOf(itemID)
     end
 end
 
+local function NameOf(id)
+    local name = (C_Item and C_Item.GetItemInfo and C_Item.GetItemInfo(id)) or (GetItemInfo and GetItemInfo(id))
+    return type(name) == "string" and name:lower() or ""
+end
+
+local function Any(name, words)
+    for _, w in ipairs(words) do if name:find(w, 1, true) then return true end end
+    return false
+end
+
 -- words that make a Trade Goods "meat" item a fish (fish are filed together with meat on this client)
 local FISH_WORDS = { "fish", "mackerel", "catfish", "salmon", "snapper", "eel", "squid", "lobster", "trout", "bass",
     "tuna", "sturgeon", "mightfish", "blackmouth", "clam", "crab", "whisker", "oyster", "shrimp", "pike",
     "stonescale", "firefin", "nightfin", "angler", "herring", "sardine", "minnow", "flounder", "grouper" }
-local function IsFish(id)
-    local name = (C_Item and C_Item.GetItemInfo and C_Item.GetItemInfo(id)) or (GetItemInfo and GetItemInfo(id))
-    if type(name) ~= "string" then return false end
-    name = name:lower()
-    for _, w in ipairs(FISH_WORDS) do if name:find(w, 1, true) then return true end end
-    return false
-end
+local function IsFish(id) return Any(NameOf(id), FISH_WORDS) end
 
-function P.QuickAttach(sub, class, only)
+-- skinned (raw) leather and scales; everything else filed as leather is made by leatherworkers
+local SKIN_WORDS = { "hide", "scrap", "scale", "devilsaur leather", "core leather", "chimera leather", "warbear leather",
+    "knothide", "wolfhide", "blackened", "lava core", "worn dragon" }
+-- raw stone, as opposed to bars and sharpening stones
+local RAW_STONE = { "rough stone", "coarse stone", "heavy stone", "solid stone", "dense stone" }
+-- things alchemists make that are filed as trade goods rather than potions
+local ALCHEMY_MADE = { "acid", "ink", "vial", "stonescale oil", "philosopher", "mageblood" }
+
+local QUICK = {
+    { "Tailoring: cloth", "Interface\\Icons\\INV_Fabric_Linen_01", function(id, c, s) return c == 7 and s == 5 end },
+    { "Skinning: raw leather, hides and scales", "Interface\\Icons\\INV_Misc_Pelt_Wolf_01",
+      function(id, c, s, n) return c == 7 and s == 6 and Any(n, SKIN_WORDS) end },
+    { "Leatherworking: cured and crafted leather", "Interface\\Icons\\INV_Misc_LeatherScrap_03",
+      function(id, c, s, n) return c == 7 and s == 6 and not Any(n, SKIN_WORDS) end },
+    { "Mining: ore and raw stone", "Interface\\Icons\\INV_Ore_Copper_01",
+      function(id, c, s, n) return c == 7 and s == 7 and (n:find("ore", 1, true) and not n:find("core", 1, true) or Any(n, RAW_STONE)) and not Any(n, { "bar" }) end },
+    { "Blacksmithing: bars, sharpening and weight stones", "Interface\\Icons\\INV_Ingot_03",
+      function(id, c, s, n)
+          if c == 7 and s == 7 then
+              if Any(n, RAW_STONE) then return false end
+              if n:find("ore", 1, true) and not n:find("core", 1, true) and not n:find("bar", 1, true) then return false end
+              return true
+          end
+          return (c == 0 or c == 7) and Any(n, { "sharpening stone", "weightstone", "grinding stone", "whetstone" })
+      end },
+    { "Fishing: fish and shellfish", "Interface\\Icons\\INV_Misc_Fish_02", function(id, c, s) return c == 7 and s == 8 and IsFish(id) end },
+    { "Cooking: meat and fish", "Interface\\Icons\\INV_Misc_Food_15", function(id, c, s) return c == 7 and s == 8 end },
+    { "Herbalism: herbs", "Interface\\Icons\\INV_Misc_Herb_07", function(id, c, s) return c == 7 and s == 9 end },
+    { "Alchemy: potions, elixirs, flasks and what alchemists make", "Interface\\Icons\\INV_Potion_54",
+      function(id, c, s, n)
+          if c == 0 and (s == 1 or s == 2 or s == 3) then return true end
+          return c == 7 and s ~= 9 and Any(n, ALCHEMY_MADE)
+      end },
+    { "Elemental: motes, essences, primals", "Interface\\Icons\\INV_Elemental_Primal_Fire", function(id, c, s) return c == 7 and s == 10 end },
+    { "Enchanting: dust, essences, shards", "Interface\\Icons\\INV_Enchant_DustStrange", function(id, c, s) return c == 7 and s == 12 end },
+    { "Engineering: parts, explosives, devices", "Interface\\Icons\\INV_Misc_Gear_01",
+      function(id, c, s) return c == 7 and (s == 1 or s == 2 or s == 3) end },
+    { "First Aid: bandages", "Interface\\Icons\\INV_Misc_Bandage_15", function(id, c, s) return c == 0 and s == 7 end },
+    { "Other trade goods", "Interface\\Icons\\INV_Misc_Rune_01", function(id, c, s) return c == 7 and s == 11 end },
+    { "All trade goods", "Interface\\Icons\\INV_Misc_Bag_10", function(id, c) return c == 7 end },
+}
+
+function P.QuickAttach(test)
     if not EnsureSendTab() then P.Print("Open the Send Mail tab first.") return 0 end
     local n = P.AttachWhere(function(id)
         local c, s = ClassOf(id)
-        if c ~= (class or 7) then return false end
-        if only == "fish" and not IsFish(id) then return false end
-        if sub == nil then return true end
-        if type(sub) == "table" then
-            for _, v in ipairs(sub) do if s == v then return true end end
-            return false
-        end
-        return s == sub
+        if not c then return false end
+        return test(id, c, s, NameOf(id)) and true or false
     end)
     P.Print(n > 0 and ("Attached %d stack(s)."):format(n) or "Nothing of that kind in your bags.")
     return n
@@ -472,9 +497,9 @@ local function Build()
             local b = CreateFrame("Button", nil, sf)
             b:SetSize(26, 26)
             b:SetPoint("TOPLEFT", sf, "TOPRIGHT", 2 + math.floor((i - 1) / 7) * 30, -60 - ((i - 1) % 7) * 30)
-            b:SetNormalTexture(q[3])
+            b:SetNormalTexture(q[2])
             b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
-            b:SetScript("OnClick", function() P.QuickAttach(q[2], q[4], q[5]) end)
+            b:SetScript("OnClick", function() P.QuickAttach(q[3]) end)
             b:SetScript("OnEnter", function(self)
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 GameTooltip:SetText("Attach all: " .. q[1], 1, 1, 1)
