@@ -1,9 +1,8 @@
 local ADDON_NAME, P = ...
--- Window customization (see Look.lua). Opens with /postagelook.
+-- Window customization (see Look.lua). Opens from the minimap button (Alt-click).
 if not P.WinLook then return end
 P.WinLook.Setup({
     title = "Postage",
-    slash = "postagelook",
     media = "Interface\\AddOns\\Postage\\Media\\",
     db = function() return PostageDB end,
     windows = {
