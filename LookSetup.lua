@@ -50,9 +50,61 @@ local PAPER_ONLY = function()
     }
 end
 
+
+-- every Postage setting, in the one options window
+local function Options()
+    local db = function() return P.db end
+    local function bool(tbl, key, default)
+        return function() local t = tbl() if default == false then return t[key] == true end return t[key] ~= false end,
+               function(v) tbl()[key] = v end
+    end
+    local function chk(label, tbl, key, after, default)
+        local g, st = bool(tbl, key, default)
+        return { kind = "check", label = label, get = g, set = function(v) st(v) if after then after(v) end end }
+    end
+    local openAll = function() return P.db.openAll end
+    local modules = function() return P.db.modules end
+    local sizes = { "small", "normal", "large" }
+    local sizeNames = { small = "Small", normal = "Medium", large = "Large" }
+    return {
+        sections = {
+            { id = "openall", title = "Open All takes", open = true, rows = {
+                chk("Auction sold (gold)", openAll, "ahSold"), chk("Auction won (items)", openAll, "ahWon"),
+                chk("Auction expired", openAll, "ahExpired"), chk("Auction cancelled", openAll, "ahCancelled"),
+                chk("Outbid (gold back)", openAll, "ahOutbid"), chk("Postmaster / NPC mail", openAll, "npc"),
+                chk("Mail from players", openAll, "player"),
+                { kind = "note", label = "COD mail is always skipped." },
+            } },
+            { id = "general", title = "General", open = true, rows = {
+                { kind = "check", label = "Show the minimap button",
+                  get = function() return P.db.minimap.show end,
+                  set = function(v) P.db.minimap.show = v if P.UpdateMinimap then P.UpdateMinimap() end end },
+                chk("Autocomplete names in the To: box", db, "autocomplete"),
+                chk("Express: shift-click takes, ctrl-click returns, scroll pages, alt-click attaches", modules, "express"),
+                chk("TradeBlock: decline trades and guild charters while the mailbox is open", modules, "tradeblock"),
+                { kind = "slider", label = "Keep this many bag slots free when opening mail", min = 0, max = 20, step = 1,
+                  get = function() return P.db.freeBagSlots or 0 end, set = function(v) P.db.freeBagSlots = v end },
+                { kind = "cycle", label = "Size of the popup lists", values = sizes, names = sizeNames,
+                  get = function() return P.db.look.menuSize or "normal" end,
+                  set = function(v) P.db.look.menuSize = v if P.ApplyLook then P.ApplyLook() end end },
+                chk("Dark Postage theme on the mailbox windows (a custom look in the Mailbox tab replaces it)", db, "skinMail",
+                    function() if P.SkinMail then P.SkinMail() end end),
+            } },
+            { id = "send", title = "Send Mail", open = true, rows = {
+                chk("Keep the recipient after sending (for several mails in a row)", db, "keepRecipient", function(v)
+                    if P.Fire then P.Fire("options") end end, false),
+                chk("Show the quick-attach tray beside the Send Mail window",
+                    function() return P.WinLook.Get("mail") end, "tray", function() if P.LayoutTray then P.LayoutTray() end end),
+                { kind = "note", label = "The tray's position, size, panel and which profession buttons it shows are in the Mailbox tab." },
+            } },
+        },
+    }
+end
+
 P.WinLook.Setup({
     title = "Postage",
     syncDefault = false,
+    options = Options,
     media = "Interface\\AddOns\\Postage\\Media\\",
     db = function() return PostageDB end,
     windows = {
@@ -62,7 +114,6 @@ P.WinLook.Setup({
         { id = "openmail", name = "Open mail", global = "OpenMailFrame", strip = "template", regions = true,
           hideGlobals = { "OpenMailFrameInset" }, title = function(f) return f.TitleText or _G.OpenMailFrameTitleText end,
           extra = PAPER_ONLY, apply = function(f, s, on) if P.ApplyMailLook then P.ApplyMailLook(on) end end },
-        { id = "options", name = "Options window", global = "PostageOptionsFrame", strip = "backdrop" },
         { id = "menu", name = "Quick-send menu", global = "PostagePopupMenu", strip = "backdrop" },
     },
 })

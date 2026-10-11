@@ -372,6 +372,7 @@ local function BuildOptions()
 end
 
 function P.ToggleOptions()
+    if P.WinLook and P.WinLook.Toggle then P.WinLook.Toggle() return end
     if not opts then BuildOptions() end
     opts:SetShown(not opts:IsShown())
 end

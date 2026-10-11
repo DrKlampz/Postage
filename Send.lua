@@ -379,6 +379,7 @@ end
 -- The quick-attach tray: one tidy panel attached to the Send Mail window
 ---------------------------------------------------------------------------
 P.QUICK = QUICK
+local ui = {}
 
 local TRAY_DEFAULTS = { tray = true, traySide = "right", trayCols = 3, traySize = 28, trayGap = 4, trayPanel = true,
     trayTitle = true, trayCounts = true, trayHideEmpty = false, trayAlpha = 0.96 }
@@ -585,7 +586,6 @@ end
 ---------------------------------------------------------------------------
 -- Building into the Send Mail frame
 ---------------------------------------------------------------------------
-local ui = {}
 
 local function Build()
     local sf, box = _G.SendMailFrame, _G.SendMailNameEditBox
