@@ -105,10 +105,42 @@ local function Options()
     }
 end
 
+-- the Postage page inside GreedUI's window: paper, slots and the quick-attach tray (rows in GreedUI's own format)
+local function GreedRows()
+    local G = _G.GreedUI
+    if not (G and G.UI and G.db) then return {} end
+    local UI = G.UI
+    local function OL() G.db.addonLook = G.db.addonLook or {} G.db.addonLook.Postage = G.db.addonLook.Postage or {} return G.db.addonLook.Postage end
+    local function W() return P.WinLook.Get("mail") end
+    local function paper() G.SyncAddons(G.db.syncAddons) if P.ApplyMailLook then P.ApplyMailLook() end end
+    local function tray() if P.LayoutTray then P.LayoutTray() end end
+    local function slots() if P.ApplyMailLook then P.ApplyMailLook() end end
+    local rows = {
+        UI.Choice("Letter paper (Send Mail, Open Mail and the inbox)", OL, "paper", { { "dark", "Dark paper" }, { "tint", "Plain, in my color" }, { "original", "Original yellow paper" }, { "hidden", "No paper" } }, paper,
+            { get = function() return OL().paper or "dark" end }),
+        UI.Color("Paper color (for 'Plain, in my color')", OL, "paperColor", function() if (OL().paper or "dark") == "dark" then OL().paper = "tint" end paper() end,
+            { get = function() local c = OL().paperColor or { 0.1, 0.1, 0.13 } return c[1], c[2], c[3] end }),
+        UI.Slider("Paper opacity", OL, "paperAlpha", 0, 1, 0.05, "%.2f", paper, { get = function() return OL().paperAlpha or 1 end }),
+        UI.Slider("Size of the item slots", W, "slotScale", 0.7, 1.2, 0.05, "%.2f", slots, { get = function() return W().slotScale or 1 end }),
+        UI.Toggle("Quick-attach tray beside Send Mail", W, "tray", tray),
+        UI.Choice("Tray side", W, "traySide", { { "right", "Right of the window" }, { "left", "Left of the window" }, { "below", "Under the window" } }, tray),
+        UI.Slider("Tray buttons per row", W, "trayCols", 1, 6, 1, nil, tray, { get = function() return W().trayCols or 3 end }),
+        UI.Slider("Tray button size", W, "traySize", 20, 44, 1, nil, tray, { get = function() return W().traySize or 28 end }),
+        UI.Slider("Tray button spacing", W, "trayGap", 0, 10, 1, nil, tray, { get = function() return W().trayGap or 4 end }),
+        UI.Toggle("Panel behind the tray", W, "trayPanel", tray),
+        UI.Toggle("Tray title", W, "trayTitle", tray),
+        UI.Toggle("Show how many stacks each button attaches", W, "trayCounts", tray),
+        UI.Toggle("Hide buttons with nothing to attach", W, "trayHideEmpty", tray),
+        UI.Slider("Tray panel opacity", W, "trayAlpha", 0, 1, 0.05, "%.2f", tray, { get = function() return W().trayAlpha or 0.96 end }),
+    }
+    return rows
+end
+
 P.WinLook.Setup({
     title = "Postage",
     syncDefault = false,
     options = Options,
+    ext = GreedRows,
     media = "Interface\\AddOns\\Postage\\Media\\",
     db = function() return PostageDB end,
     windows = {
