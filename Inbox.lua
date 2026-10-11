@@ -104,50 +104,109 @@ local function FindById(id)
 end
 
 local Step
+local function Key(h) return tostring(h.sender) .. "\1" .. tostring(h.subject) end
+
+-- Wait for the inbox to change after a loot/return. A mail's id includes its money and item count, so a
+-- partly looted mail gets a NEW id: "id gone" means "something changed", not "mail finished".
 local function WaitFor(id, count, tries)
     if not Q.running then return end
     local gone = not FindById(id)
-    if gone or P.NumMail() ~= count or tries >= 20 then
-        C_Timer.After(0.1, Step)
+    if gone or P.NumMail() ~= count or tries >= 25 then
+        Q.progressed = (gone or P.NumMail() ~= count) and true or false
+        C_Timer.After(0.15, Step)
     else
         C_Timer.After(0.1, function() WaitFor(id, count, tries + 1) end)
     end
 end
 
+-- the next mail to work on: first the one we were already emptying, then the next id in the list
+local function NextOpenTarget()
+    local cur = Q.cur
+    Q.cur = nil
+    if cur then
+        for i = 1, P.NumMail() do
+            local h = P.Header(i)
+            if h and Key(h) == cur.key and h.cod == 0 and (h.itemCount > 0 or h.money > 0)
+               and h.itemCount <= cur.itemCount and h.money <= cur.money then
+                if Q.progressed then return h end
+                Q.skip[h.id] = true                       -- nothing changed after waiting: leave it
+                Q.stuck = Q.stuck + 1
+                break
+            end
+        end
+    end
+    while true do
+        local id = table.remove(Q.ids, 1)
+        if not id then return nil end
+        local h = FindById(id)
+        if h and not Q.skip[id] then return h end
+    end
+end
+
+local function Rebuild()
+    -- more mail may be waiting beyond what the inbox shows (it lists 50 at a time) or have been left behind
+    if Q.kind ~= "open" or not Q.all or Q.rounds >= 30 then return false end
+    Q.rounds = Q.rounds + 1
+    local ids = {}
+    for _, id in ipairs(P.OpenAllIDs()) do if not Q.skip[id] then ids[#ids + 1] = id end end
+    if #ids == 0 then return false end
+    Q.ids = ids
+    return true
+end
+
 Step = function()
     if not Q.running then return end
+    if Q.kind == "open" then
+        local h = NextOpenTarget()
+        if not h and Rebuild() then h = NextOpenTarget() end
+        if not h then
+            -- the inbox only holds 50 at a time: ask for the rest and try once more
+            local _, total = 0, 0
+            if GetInboxNumItems then _, total = GetInboxNumItems() end
+            if total and total > P.NumMail() and not Q.askedMore and CheckInbox then
+                Q.askedMore = true
+                CheckInbox()
+                C_Timer.After(2, Step)
+                return
+            end
+            Finish("Done opening mail." .. (Q.stuck > 0 and (" " .. Q.stuck .. " mail(s) wouldn't open fully.") or ""))
+            return
+        end
+        Q.askedMore = false
+        if h.cod > 0 then Q.skippedCOD = Q.skippedCOD + 1 Q.skip[h.id] = true Step() return end
+        if h.money == 0 and h.itemCount == 0 then Q.skip[h.id] = true Step() return end
+        checked[h.id] = nil
+        if h.itemCount > 0 and P.FreeBagSlots() - 1 < (P.db.freeBagSlots or 0) then
+            Q.ids = {}
+            Finish(("Stopped: your bags are full (keeping %d slot(s) free)."):format(P.db.freeBagSlots or 0))
+            return
+        end
+        Q.cur = { key = Key(h), itemCount = h.itemCount, money = h.money }
+        local count = P.NumMail()
+        if AutoLootMailItem then AutoLootMailItem(h.index) end
+        WaitFor(h.id, count, 0)
+        return
+    end
     local id = table.remove(Q.ids, 1)
     if not id then
-        Finish(Q.kind == "return" and "Done returning mail." or "Done opening mail.")
+        Finish("Done returning mail.")
         return
     end
     local h = FindById(id)
     if not h then Step() return end                  -- already gone
     checked[id] = nil
-    if Q.kind == "open" then
-        if h.cod > 0 then Q.skippedCOD = Q.skippedCOD + 1 Step() return end
-        if h.money == 0 and h.itemCount == 0 then Step() return end
-        if h.itemCount > 0 and P.FreeBagSlots() - h.itemCount < (P.db.freeBagSlots or 0) then
-            Q.ids = {}
-            Finish(("Stopped: your bags are full (keeping %d slot(s) free)."):format(P.db.freeBagSlots or 0))
-            return
-        end
-        local count = P.NumMail()
-        if AutoLootMailItem then AutoLootMailItem(h.index) end
-        WaitFor(id, count, 0)
-    else
-        if not h.returnable then Q.skippedOther = Q.skippedOther + 1 Step() return end
-        local count = P.NumMail()
-        if ReturnInboxItem then ReturnInboxItem(h.index) end
-        WaitFor(id, count, 0)
-    end
+    if not h.returnable then Q.skippedOther = Q.skippedOther + 1 Step() return end
+    local count = P.NumMail()
+    if ReturnInboxItem then ReturnInboxItem(h.index) end
+    WaitFor(id, count, 0)
 end
 
-function Q.Start(kind, ids)
+function Q.Start(kind, ids, all)
     if Q.running then P.Print("Already working on it.") return end
     if #ids == 0 then P.Print("Nothing to do.") return end
-    Q.kind, Q.ids, Q.running = kind, ids, true
-    Q.skippedCOD, Q.skippedOther = 0, 0
+    Q.kind, Q.ids, Q.running, Q.all = kind, ids, true, all
+    Q.skippedCOD, Q.skippedOther, Q.stuck, Q.rounds = 0, 0, 0, 0
+    Q.skip, Q.cur, Q.askedMore, Q.progressed = {}, nil, false, false
     Q.money0 = GetMoney and GetMoney() or 0
     Step()
 end
@@ -170,7 +229,7 @@ function P.OpenAllIDs()
     return ids
 end
 
-function P.OpenAll() Q.Start("open", P.OpenAllIDs()) end
+function P.OpenAll() Q.Start("open", P.OpenAllIDs(), true) end
 
 local function CheckedIDs()
     local ids = {}
