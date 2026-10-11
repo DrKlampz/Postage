@@ -22,7 +22,8 @@ local function MailExtra()
         sections = {
             { id = "paper", title = "Letter paper", rows = {
                 { key = "paper", kind = "cycle", label = "Paper", values = PAPER_ORDER, names = PAPER_NAMES },
-                { key = "paperColor", kind = "color", label = "Paper color (for the plain paper)" },
+                { key = "paperColor", kind = "color", label = "Paper color (switches the paper to plain)",
+                  touch = function(t) if t.paper == "original" or t.paper == "hidden" then t.paper = "tint" end t.enabled = true end },
                 { key = "paperAlpha", kind = "slider", label = "Paper opacity", min = 0, max = 1, step = 0.05, fmt = "%.2f" },
             } },
             { id = "slots", title = "Attachment slots", rows = {
