@@ -477,7 +477,8 @@ local function Build()
     -- Open and Return sit in the strip above the first mail row, clear of the rows
     local first = _G.MailItem1 or Btn(1)
     if first then
-        buttons.open:SetPoint("BOTTOMLEFT", first, "TOPLEFT", 42, 6)
+        buttons.open:SetPoint("BOTTOMLEFT", first, "TOPLEFT", 42, 4)
+        buttons.open:SetHeight(20) buttons.ret:SetHeight(20)
     else
         buttons.open:SetPoint("TOPLEFT", inbox, "TOPLEFT", 60, -58)
     end
