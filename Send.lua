@@ -309,7 +309,6 @@ local QUICK = {
     { "Engineering: parts, explosives, devices", { 1, 2, 3 }, "Interface\\Icons\\INV_Misc_Gear_01" },
     { "Alchemy: potions, elixirs, flasks", { 1, 2, 3 }, "Interface\\Icons\\INV_Potion_54", 0 },
     { "First Aid: bandages", 7, "Interface\\Icons\\INV_Misc_Bandage_15", 0 },
-    { "Jewelcrafting: gems", nil, "Interface\\Icons\\INV_Misc_Gem_Variety_01", 3 },
     { "Other trade goods", 11, "Interface\\Icons\\INV_Misc_Rune_01" },
     { "All trade goods", nil, "Interface\\Icons\\INV_Misc_Bag_10" },
 }
