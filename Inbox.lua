@@ -479,12 +479,24 @@ local function Build()
     if first then
         buttons.open:SetPoint("BOTTOMLEFT", first, "TOPLEFT", 42, 4)
         buttons.open:SetHeight(20) buttons.ret:SetHeight(20)
-        -- nudge the whole mail list down a little so the buttons have room under the header
-        if not first.postageNudged and first.GetPoint then
-            local pt, rel, rp, x, y = first:GetPoint(1)
-            if pt then
-                first.postageNudged = true
-                first:SetPoint(pt, rel, rp, x, (y or 0) - 8)
+        -- make the window a little taller: the mail list and the paging row move down together,
+        -- which leaves a clear strip under the header for Open / Return
+        if not P.inboxGrown then
+            P.inboxGrown = true
+            local D = 12
+            local function Shift(f)
+                if not (f and f.GetNumPoints and f.GetNumPoints(f) > 0) then return end
+                local pts = {}
+                for i = 1, f:GetNumPoints() do pts[i] = { f:GetPoint(i) } end
+                f:ClearAllPoints()
+                for _, q in ipairs(pts) do f:SetPoint(q[1], q[2], q[3], q[4] or 0, (q[5] or 0) - D) end
+            end
+            Shift(first)
+            local prev0, nxt0 = P.PageButtons()
+            Shift(prev0) Shift(nxt0) Shift(_G.OpenAllMail)
+            Shift(_G.InboxCountText) Shift(_G.InboxTooMuchMail)
+            for _, f in ipairs({ _G.MailFrame, inbox }) do
+                if f and f.GetHeight and f.SetHeight then f:SetHeight(f:GetHeight() + D) end
             end
         end
     else
