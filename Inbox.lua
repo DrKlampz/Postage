@@ -479,6 +479,14 @@ local function Build()
     if first then
         buttons.open:SetPoint("BOTTOMLEFT", first, "TOPLEFT", 42, 4)
         buttons.open:SetHeight(20) buttons.ret:SetHeight(20)
+        -- nudge the whole mail list down a little so the buttons have room under the header
+        if not first.postageNudged and first.GetPoint then
+            local pt, rel, rp, x, y = first:GetPoint(1)
+            if pt then
+                first.postageNudged = true
+                first:SetPoint(pt, rel, rp, x, (y or 0) - 8)
+            end
+        end
     else
         buttons.open:SetPoint("TOPLEFT", inbox, "TOPLEFT", 60, -58)
     end
