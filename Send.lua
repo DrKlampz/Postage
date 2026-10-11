@@ -1,7 +1,7 @@
 -- Postage send-mail side:
 --   BlackBook   - a contact button on the To: box (your alts, recently mailed, friends, guild),
 --                 plus name autocomplete as you type
---   Wire        - fills an empty subject with the gold you're sending
+--   Wire        - fills an empty subject with the gold you're sending, as soon as you type the gold
 --   Express     - alt-click a bag item to attach it; shift-alt-click attaches every stack of it
 --   QuickAttach - one-click buttons that attach all your cloth, herbs, ore, and so on
 local ADDON_NAME, P = ...
@@ -400,26 +400,52 @@ local function Build()
         ui.keep = cb
     end
 
-    -- Wire
-    local send = _G.SendMailMailButton
-    if send then
-        send:HookScript("PreClick", function()
-            if not P.On("wire") then return end
-            local subj, money = _G.SendMailSubjectEditBox, _G.SendMailMoney
-            if not subj or P.Trim(subj:GetText() or "") ~= "" then return end
-            local copper = 0
-            if money and money.GetAmount then copper = money:GetAmount() or 0
-            elseif MoneyInputFrame_GetCopper and money then copper = MoneyInputFrame_GetCopper(money) or 0 end
-            if type(copper) == "number" and copper > 0 and not P.IsSecret(copper) then
-                local g, s, c = math.floor(copper / 10000), math.floor((copper % 10000) / 100), copper % 100
-                local parts = {}
-                if g > 0 then parts[#parts + 1] = g .. "g" end
-                if s > 0 then parts[#parts + 1] = s .. "s" end
-                if c > 0 or #parts == 0 then parts[#parts + 1] = c .. "c" end
-                subj:SetText(table.concat(parts, " "))
-            end
-        end)
+    -- Wire: Blizzard keeps Send disabled while the subject is empty, so a click hook is too late.
+    -- Fill the subject as soon as gold is entered (and take it back out if the gold is removed).
+    local lastAuto
+    local filling = false
+    local function GoldText()
+        local money = _G.SendMailMoney
+        local copper = 0
+        if money and money.GetAmount then copper = money:GetAmount() or 0
+        elseif MoneyInputFrame_GetCopper and money then copper = MoneyInputFrame_GetCopper(money) or 0 end
+        if type(copper) ~= "number" or P.IsSecret(copper) or copper <= 0 then return nil end
+        local g, s, c = math.floor(copper / 10000), math.floor((copper % 10000) / 100), copper % 100
+        local parts = {}
+        if g > 0 then parts[#parts + 1] = g .. "g" end
+        if s > 0 then parts[#parts + 1] = s .. "s" end
+        if c > 0 then parts[#parts + 1] = c .. "c" end
+        return table.concat(parts, " ")
     end
+    local function AutoSubject()
+        if filling or not P.On("wire") then return end
+        local subj = _G.SendMailSubjectEditBox
+        if not subj then return end
+        local cur = P.Trim(subj:GetText() or "")
+        local want = GoldText()
+        filling = true
+        if want and (cur == "" or cur == lastAuto) then
+            if cur ~= want then subj:SetText(want) end
+            lastAuto = want
+        elseif not want and lastAuto and cur == lastAuto then
+            subj:SetText("")
+            lastAuto = nil
+        end
+        filling = false
+        if cur == "" and want and _G.SendMailFrame_CanSend then pcall(_G.SendMailFrame_CanSend) end
+    end
+    P.AutoSubject = AutoSubject
+    local money = _G.SendMailMoney
+    if money then
+        for _, k in ipairs({ "gold", "silver", "copper" }) do
+            local box = money[k]
+            if box and box.HookScript then box:HookScript("OnTextChanged", AutoSubject) end
+        end
+    end
+    if _G.SendMailFrame_CanSend then hooksecurefunc("SendMailFrame_CanSend", AutoSubject) end
+    local send = _G.SendMailMailButton
+    if send then send:HookScript("PreClick", AutoSubject) end
+    if _G.SendMailFrame then _G.SendMailFrame:HookScript("OnShow", function() lastAuto = nil end) end
 
     -- QuickAttach column down the right edge of the Send Mail frame
     if sf then

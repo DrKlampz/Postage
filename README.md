@@ -29,7 +29,7 @@ Everything Postage adds lives inside the normal mailbox, so it looks and works l
 - **Alt-click** an item in your bags to attach it; **shift-alt-click** attaches every stack of it.
 - **QuickAttach.** Buttons beside the Send Mail frame attach all your cloth, leather, ore, herbs,
   cooking, elemental, enchanting or engineering materials in one click.
-- **Wire.** Leave the subject empty when sending gold and it's filled in with the amount.
+- **Wire.** Leave the subject empty when sending gold and it is filled in with the amount as soon as you type the gold, so Send is never greyed out.
 
 ## Reading
 
