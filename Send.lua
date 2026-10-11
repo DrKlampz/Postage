@@ -297,15 +297,20 @@ end
 -- standard ones and haven't been checked against a Forever client yet, so "All trade goods"
 -- is there as a catch-all.
 ---------------------------------------------------------------------------
+-- { label, subclass(es) or nil for all, icon, item class (default 7 = trade goods) }
 local QUICK = {
-    { "Cloth", 5, "Interface\\Icons\\INV_Fabric_Linen_01" },
-    { "Leather", 6, "Interface\\Icons\\INV_Misc_LeatherScrap_03" },
-    { "Metal & Stone", 7, "Interface\\Icons\\INV_Ore_Copper_01" },
-    { "Cooking", 8, "Interface\\Icons\\INV_Misc_Food_15" },
-    { "Herbs", 9, "Interface\\Icons\\INV_Misc_Herb_07" },
-    { "Elemental", 10, "Interface\\Icons\\INV_Elemental_Primal_Fire" },
-    { "Enchanting", 12, "Interface\\Icons\\INV_Enchant_DustStrange" },
-    { "Engineering (parts, explosives, devices)", { 1, 2, 3 }, "Interface\\Icons\\INV_Misc_Gear_01" },
+    { "Tailoring: cloth", 5, "Interface\\Icons\\INV_Fabric_Linen_01" },
+    { "Leatherworking / Skinning: leather", 6, "Interface\\Icons\\INV_Misc_LeatherScrap_03" },
+    { "Mining / Blacksmithing: ore, bars, stone", 7, "Interface\\Icons\\INV_Ore_Copper_01" },
+    { "Cooking / Fishing: meat and fish", 8, "Interface\\Icons\\INV_Misc_Food_15" },
+    { "Herbalism / Alchemy: herbs", 9, "Interface\\Icons\\INV_Misc_Herb_07" },
+    { "Elemental: motes, essences, primals", 10, "Interface\\Icons\\INV_Elemental_Primal_Fire" },
+    { "Enchanting: dust, essences, shards", 12, "Interface\\Icons\\INV_Enchant_DustStrange" },
+    { "Engineering: parts, explosives, devices", { 1, 2, 3 }, "Interface\\Icons\\INV_Misc_Gear_01" },
+    { "Alchemy: potions, elixirs, flasks", { 1, 2, 3 }, "Interface\\Icons\\INV_Potion_54", 0 },
+    { "First Aid: bandages", 7, "Interface\\Icons\\INV_Misc_Bandage_15", 0 },
+    { "Jewelcrafting: gems", nil, "Interface\\Icons\\INV_Misc_Gem_Variety_01", 3 },
+    { "Other trade goods", 11, "Interface\\Icons\\INV_Misc_Rune_01" },
     { "All trade goods", nil, "Interface\\Icons\\INV_Misc_Bag_10" },
 }
 
@@ -316,11 +321,11 @@ local function ClassOf(itemID)
     end
 end
 
-function P.QuickAttach(sub)
+function P.QuickAttach(sub, class)
     if not EnsureSendTab() then P.Print("Open the Send Mail tab first.") return 0 end
     local n = P.AttachWhere(function(id)
         local c, s = ClassOf(id)
-        if c ~= 7 then return false end
+        if c ~= (class or 7) then return false end
         if sub == nil then return true end
         if type(sub) == "table" then
             for _, v in ipairs(sub) do if s == v then return true end end
@@ -453,10 +458,10 @@ local function Build()
         for i, q in ipairs(QUICK) do
             local b = CreateFrame("Button", nil, sf)
             b:SetSize(26, 26)
-            b:SetPoint("TOPLEFT", sf, "TOPRIGHT", 2, -60 - (i - 1) * 30)
+            b:SetPoint("TOPLEFT", sf, "TOPRIGHT", 2 + math.floor((i - 1) / 7) * 30, -60 - ((i - 1) % 7) * 30)
             b:SetNormalTexture(q[3])
             b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
-            b:SetScript("OnClick", function() P.QuickAttach(q[2]) end)
+            b:SetScript("OnClick", function() P.QuickAttach(q[2], q[4]) end)
             b:SetScript("OnEnter", function(self)
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 GameTooltip:SetText("Attach all: " .. q[1], 1, 1, 1)

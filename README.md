@@ -27,7 +27,7 @@ Everything Postage adds lives inside the normal mailbox, so it looks and works l
 - **Keep recipient.** Tick it to keep the name in the To: box after sending, so you can send
   several mails to the same person.
 - **Alt-click** an item in your bags to attach it; **shift-alt-click** attaches every stack of it.
-- **QuickAttach.** Buttons beside the Send Mail frame attach all your cloth, leather, ore, herbs,
+- **QuickAttach.** Buttons beside the Send Mail frame attach everything for a profession in one click (tailoring, leatherworking, mining, cooking, herbalism, alchemy, enchanting, engineering, first aid, jewelcrafting and more: cloth, leather, ore, herbs,
   cooking, elemental, enchanting or engineering materials in one click.
 - **Wire.** Leave the subject empty when sending gold and it is filled in with the amount as soon as you type the gold, so Send is never greyed out.
 
