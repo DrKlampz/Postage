@@ -385,11 +385,12 @@ local STRIP_KEYS = { "Bg", "NineSlice", "Inset", "InsetBg", "TopTileStreaks", "T
 local function StripOne(region, on)
     if not (region and region.SetAlpha) then return end
     if on then
-        if stripped[region] == nil then stripped[region] = region:GetAlpha() end
+        if stripped[region] == nil then stripped[region] = region:GetAlpha() region.lookOrigAlpha = stripped[region] end
         region:SetAlpha(0)
     elseif stripped[region] ~= nil then
         region:SetAlpha(stripped[region])
         stripped[region] = nil
+        region.lookOrigAlpha = nil
     end
 end
 local function StripFrame(f, on)
@@ -409,6 +410,10 @@ end
 local function SkinFrame(f, key)
     if not f then return end
     local on = P.db.skinMail ~= false
+    if f.lookStrip then   -- the window has its own custom look (Alt-click the minimap button): that one wins
+        if P[key] then P[key]:Hide() end
+        return
+    end
     local skin = P[key]
     if on and not skin then
         skin = CreateFrame("Frame", nil, f, "BackdropTemplate")

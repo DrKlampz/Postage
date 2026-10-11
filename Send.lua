@@ -376,6 +376,213 @@ function P.QuickAttach(test)
 end
 
 ---------------------------------------------------------------------------
+-- The quick-attach tray: one tidy panel attached to the Send Mail window
+---------------------------------------------------------------------------
+P.QUICK = QUICK
+
+local TRAY_DEFAULTS = { tray = true, traySide = "right", trayCols = 3, traySize = 28, trayGap = 4, trayPanel = true,
+    trayTitle = true, trayCounts = true, trayHideEmpty = false, trayAlpha = 0.96 }
+local function MS()
+    local s = P.WinLook and P.WinLook.Get and P.WinLook.Get("mail")
+    return s or TRAY_DEFAULTS
+end
+
+-- how many unsoulbound stacks in your bags a button would attach
+function P.QuickCount(test)
+    local n = 0
+    local nslots = (C_Container and C_Container.GetContainerNumSlots) or GetContainerNumSlots
+    for bag = 0, 4 do
+        for slot = 1, (nslots and nslots(bag) or 0) do
+            local info = ItemInfo(bag, slot)
+            if info and info.itemID and not info.isBound then
+                local c, sub = ClassOf(info.itemID)
+                if c and test(info.itemID, c, sub, NameOf(info.itemID)) then n = n + 1 end
+            end
+        end
+    end
+    return n
+end
+
+local function TrayColors()
+    local look = P.Look()
+    local bg, edge, accent = look.bg, look.edge, look.accent
+    if P.WinLook and P.WinLook.On and P.WinLook.On("mail") then
+        local e = P.WinLook.Effective("mail")
+        if e then bg, edge, accent = e.bgColor, e.edgeColor, e.titleColor end
+    end
+    return bg, edge, accent
+end
+
+function P.BuildTray()
+    if ui.tray then return ui.tray end
+    local sf = _G.SendMailFrame
+    if not sf then return end
+    local t = CreateFrame("Frame", "PostageQuickTray", sf, "BackdropTemplate")
+    t:SetFrameLevel((sf:GetFrameLevel() or 1) + 3)
+    t:SetClampedToScreen(true)
+    t.title = t:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    t.title:SetText("Quick attach")
+    t.line = t:CreateTexture(nil, "ARTWORK")
+    t.line:SetTexture("Interface\\Buttons\\WHITE8X8")
+    t.buttons = {}
+    for i, q in ipairs(QUICK) do
+        local b = CreateFrame("Button", nil, t)
+        b.q = q
+        b.edge = b:CreateTexture(nil, "BACKGROUND")
+        b.edge:SetTexture("Interface\\Buttons\\WHITE8X8")
+        b.edge:SetAllPoints(b)
+        b.icon = b:CreateTexture(nil, "ARTWORK")
+        b.icon:SetPoint("TOPLEFT", 1, -1) b.icon:SetPoint("BOTTOMRIGHT", -1, 1)
+        b.icon:SetTexture(q[2])
+        b.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+        b.count = b:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
+        b.count:SetPoint("BOTTOMRIGHT", -2, 2)
+        b:SetScript("OnClick", function() P.QuickAttach(q[3]) P.RefreshTray() end)
+        b:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText(q[1], 1, 1, 1)
+            local n = self.n or 0
+            if n > 0 then
+                GameTooltip:AddLine(("Click to attach %d stack%s from your bags."):format(n, n == 1 and "" or "s"), 0.5, 1, 0.5, true)
+            else
+                GameTooltip:AddLine("Nothing of that kind in your bags right now.", 0.7, 0.7, 0.7, true)
+            end
+            GameTooltip:AddLine("Soulbound items are skipped. Up to 12 per mail.", 0.6, 0.6, 0.6, true)
+            GameTooltip:Show()
+        end)
+        b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        t.buttons[i] = b
+    end
+    ui.tray = t
+    -- keep the counts current while the Send Mail tab is open
+    local ev = CreateFrame("Frame")
+    ev:RegisterEvent("BAG_UPDATE_DELAYED")
+    ev:SetScript("OnEvent", function()
+        if t:IsVisible() and not ev.pending then
+            ev.pending = true
+            C_Timer.After(0.25, function() ev.pending = false P.RefreshTray() end)
+        end
+    end)
+    t:SetScript("OnShow", function() P.RefreshTray() end)
+    return t
+end
+
+function P.LayoutTray()
+    local t = ui.tray
+    if not t then return end
+    local s = MS()
+    if not (P.On("quickattach") and s.tray ~= false) then t:Hide() return end
+    local anchor = _G.MailFrame or _G.SendMailFrame
+    local size = math.max(20, math.min(44, tonumber(s.traySize) or 28))
+    local gap = math.max(0, math.min(10, tonumber(s.trayGap) or 4))
+    local pad = 7
+    local list = {}
+    for i, b in ipairs(t.buttons) do
+        local shown = s["q" .. i] ~= false
+        if shown and s.trayHideEmpty and (b.n or 0) == 0 then shown = false end
+        if shown then list[#list + 1] = b else b:Hide() end
+    end
+    if #list == 0 then t:Hide() return end
+    local side = s.traySide or "right"
+    local cols
+    if side == "below" then
+        local w = (anchor and anchor:GetWidth() or 360) - pad * 2
+        cols = math.max(1, math.floor((w + gap) / (size + gap)))
+    else
+        cols = math.max(1, math.min(6, tonumber(s.trayCols) or 3))
+    end
+    cols = math.min(cols, #list)
+    local rows = math.ceil(#list / cols)
+    local titleH = s.trayTitle ~= false and 18 or 0
+    t:SetSize(pad * 2 + cols * size + (cols - 1) * gap, pad * 2 + titleH + rows * size + (rows - 1) * gap)
+    t:ClearAllPoints()
+    if side == "left" then t:SetPoint("TOPRIGHT", anchor, "TOPLEFT", -2, -8)
+    elseif side == "below" then t:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, 2)
+    else t:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 2, -8) end
+    local bg, edge, accent = TrayColors()
+    if t.SetBackdrop then
+        if s.trayPanel ~= false then
+            t:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+            t:SetBackdropColor(bg[1], bg[2], bg[3], tonumber(s.trayAlpha) or 0.96)
+            t:SetBackdropBorderColor(edge[1], edge[2], edge[3], 0.95)
+        else
+            t:SetBackdrop(nil)
+        end
+    end
+    t.title:ClearAllPoints()
+    t.title:SetPoint("TOPLEFT", pad, -6)
+    t.title:SetTextColor(accent[1], accent[2], accent[3])
+    t.title:SetShown(s.trayTitle ~= false)
+    t.line:ClearAllPoints()
+    t.line:SetPoint("TOPLEFT", pad, -(6 + 12))
+    t.line:SetPoint("TOPRIGHT", -pad, -(6 + 12))
+    t.line:SetHeight(1)
+    t.line:SetVertexColor(edge[1], edge[2], edge[3], 0.6)
+    t.line:SetShown(s.trayTitle ~= false)
+    for idx, b in ipairs(list) do
+        local col, row = (idx - 1) % cols, math.floor((idx - 1) / cols)
+        b:SetSize(size, size)
+        b:ClearAllPoints()
+        b:SetPoint("TOPLEFT", t, "TOPLEFT", pad + col * (size + gap), -(pad + titleH + row * (size + gap)))
+        b.edge:SetVertexColor(edge[1], edge[2], edge[3], (b.n or 0) > 0 and 0.9 or 0.35)
+        local have = (b.n or 0) > 0
+        b.icon:SetDesaturated(not have)
+        b.icon:SetAlpha(have and 1 or 0.4)
+        b.count:SetText((s.trayCounts ~= false and have) and b.n or "")
+        b:Show()
+    end
+    t:Show()
+end
+
+function P.RefreshTray()
+    local t = ui.tray
+    if not t then return end
+    for _, b in ipairs(t.buttons) do b.n = P.QuickCount(b.q[3]) end
+    P.LayoutTray()
+end
+
+-- letter paper of the Send Mail and Open Mail windows
+local PAPER_PIECES = {
+    mail = { "SendStationeryBackgroundLeft", "SendStationeryBackgroundRight" },
+    openmail = { "OpenStationeryBackgroundLeft", "OpenStationeryBackgroundRight" },
+}
+local function ApplyPaper(id)
+    local s = P.WinLook and P.WinLook.Get and P.WinLook.Get(id)
+    if not s then return end
+    for _, name in ipairs(PAPER_PIECES[id]) do
+        local tex = _G[name]
+        if tex and tex.SetVertexColor then
+            if not tex.pgOrig then
+                local r, g, b = tex:GetVertexColor()
+                tex.pgOrig = { r or 1, g or 1, b or 1, tex:GetAlpha() or 1 }
+            end
+            local o = tex.pgOrig
+            local mode = s.paper or "original"
+            if mode == "hidden" then
+                tex:SetAlpha(0)
+            elseif mode == "tint" or mode == "dark" then
+                local c = mode == "dark" and { 0.16, 0.14, 0.12 } or (s.paperColor or { 0.1, 0.1, 0.13 })
+                if tex.SetDesaturated then tex:SetDesaturated(true) end
+                tex:SetVertexColor(c[1] * 1.6, c[2] * 1.6, c[3] * 1.6)
+                tex:SetAlpha((tonumber(s.paperAlpha) or 1) * o[4])
+            else
+                if tex.SetDesaturated then tex:SetDesaturated(false) end
+                tex:SetVertexColor(o[1], o[2], o[3])
+                tex:SetAlpha((tonumber(s.paperAlpha) or 1) * o[4])
+            end
+        end
+    end
+end
+
+function P.ApplyMailLook()
+    pcall(ApplyPaper, "mail")
+    pcall(ApplyPaper, "openmail")
+    if P.SkinMail then P.SkinMail() end
+    P.LayoutTray()
+end
+
+---------------------------------------------------------------------------
 -- Building into the Send Mail frame
 ---------------------------------------------------------------------------
 local ui = {}
@@ -490,32 +697,19 @@ local function Build()
     if send then send:HookScript("PreClick", AutoSubject) end
     if _G.SendMailFrame then _G.SendMailFrame:HookScript("OnShow", function() lastAuto = nil end) end
 
-    -- QuickAttach column down the right edge of the Send Mail frame
-    if sf then
-        ui.quick = {}
-        for i, q in ipairs(QUICK) do
-            local b = CreateFrame("Button", nil, sf)
-            b:SetSize(26, 26)
-            b:SetPoint("TOPLEFT", sf, "TOPRIGHT", 2 + math.floor((i - 1) / 7) * 30, -60 - ((i - 1) % 7) * 30)
-            b:SetNormalTexture(q[2])
-            b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
-            b:SetScript("OnClick", function() P.QuickAttach(q[3]) end)
-            b:SetScript("OnEnter", function(self)
-                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                GameTooltip:SetText("Attach all: " .. q[1], 1, 1, 1)
-                GameTooltip:AddLine("Soulbound items are skipped. Up to 12 per mail.", 0.8, 0.8, 0.8, true)
-                GameTooltip:Show()
-            end)
-            b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-            ui.quick[i] = b
-        end
+    -- the quick-attach tray beside the Send Mail window
+    if sf then P.BuildTray() end
+    if P.WinLook then
+        if _G.MailFrame then P.WinLook.Attach("mail", _G.MailFrame) end
+        if _G.OpenMailFrame then P.WinLook.Attach("openmail", _G.OpenMailFrame) end
     end
 end
 
 local function Refresh()
     if ui.keep then ui.keep:SetChecked(P.db.keepRecipient and true or false) end
     if ui.blackbook then ui.blackbook:SetShown(P.On("blackbook")) end
-    if ui.quick then for _, b in ipairs(ui.quick) do b:SetShown(P.On("quickattach")) end end
+    if P.RefreshTray then P.RefreshTray() end
+    if P.ApplyMailLook then P.ApplyMailLook() end
 end
 
 P.AddHook("mailInit", Build)

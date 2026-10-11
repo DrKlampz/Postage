@@ -60,3 +60,7 @@ Postage attaches itself to Blizzard's mailbox frames. If a feature doesn't appea
 `/postage probe` and report what it says is missing. QuickAttach's material categories use the
 standard item subclass numbers, which haven't been checked on a Forever client yet; the
 "All trade goods" button works either way.
+
+
+## Mailbox look
+Alt-click the minimap button to restyle the mailbox: letter paper (original, plain, dark or none), and the quick-attach tray (side, size, columns, spacing, panel, counts, which professions to show). Buttons dim when you have nothing of that kind.
