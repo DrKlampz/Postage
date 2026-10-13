@@ -548,29 +548,49 @@ local PAPER_PIECES = {
     mail = { "SendStationeryBackgroundLeft", "SendStationeryBackgroundRight" },
     openmail = { "OpenStationeryBackgroundLeft", "OpenStationeryBackgroundRight" },
 }
+local function PaperPieces(id)
+    local out = {}
+    for _, name in ipairs(PAPER_PIECES[id]) do if _G[name] then out[#out + 1] = _G[name] end end
+    if id == "mail" then   -- the inbox's own paper: any large picture on the inbox page
+        if _G.InboxFrameBg then out[#out + 1] = _G.InboxFrameBg end
+        local ib = _G.InboxFrame
+        if ib and ib.GetRegions then
+            for _, r in ipairs({ ib:GetRegions() }) do
+                if r.GetObjectType and r:GetObjectType() == "Texture" and r ~= _G.InboxFrameBg then
+                    local w, h = r:GetWidth() or 0, r:GetHeight() or 0
+                    if w >= 150 and h >= 100 then out[#out + 1] = r end
+                end
+            end
+        end
+    end
+    return out
+end
 local function ApplyPaper(id)
     local s = P.WinLook and P.WinLook.Get and P.WinLook.Get(id)
     if not s then return end
-    for _, name in ipairs(PAPER_PIECES[id]) do
-        local tex = _G[name]
-        if tex and tex.SetVertexColor then
+    -- GreedUI's page for Postage can choose the paper too; with GreedUI's look on, the default paper is dark
+    local GU = _G.GreedUI
+    local gt = GU and GU.GetTheme and GU.GetTheme("Postage")
+    local mode, pcol, palpha = s.paper or "original", s.paperColor, s.paperAlpha
+    if gt then mode, pcol, palpha = gt.paper or (mode == "original" and "dark" or mode), gt.paperColor or pcol, gt.paperAlpha or palpha end
+    for _, tex in ipairs(PaperPieces(id)) do
+        if tex.SetVertexColor then
             if not tex.pgOrig then
                 local r, g, b = tex:GetVertexColor()
                 tex.pgOrig = { r or 1, g or 1, b or 1, tex:GetAlpha() or 1 }
             end
             local o = tex.pgOrig
-            local mode = s.paper or "original"
             if mode == "hidden" then
                 tex:SetAlpha(0)
             elseif mode == "tint" or mode == "dark" then
-                local c = mode == "dark" and { 0.16, 0.14, 0.12 } or (s.paperColor or { 0.1, 0.1, 0.13 })
+                local c = mode == "dark" and { 0.16, 0.14, 0.12 } or (pcol or { 0.1, 0.1, 0.13 })
                 if tex.SetDesaturated then tex:SetDesaturated(true) end
                 tex:SetVertexColor(c[1] * 1.6, c[2] * 1.6, c[3] * 1.6)
-                tex:SetAlpha((tonumber(s.paperAlpha) or 1) * o[4])
+                tex:SetAlpha((tonumber(palpha) or 1) * o[4])
             else
                 if tex.SetDesaturated then tex:SetDesaturated(false) end
                 tex:SetVertexColor(o[1], o[2], o[3])
-                tex:SetAlpha((tonumber(s.paperAlpha) or 1) * o[4])
+                tex:SetAlpha((tonumber(palpha) or 1) * o[4])
             end
         end
     end
@@ -603,8 +623,11 @@ local function Build()
     -- BlackBook button and autocomplete
     if box then
         local b = CreateFrame("Button", "PostageBlackBookButton", box)
-        b:SetSize(24, 24)
-        b:SetPoint("LEFT", box, "RIGHT", 2, 0)
+        -- inside the To: box (its right edge), so it never covers the Postage: cost label beside it
+        b:SetSize(18, 18)
+        b:SetPoint("RIGHT", box, "RIGHT", -2, 0)
+        b:SetFrameLevel(box:GetFrameLevel() + 3)
+        if box.SetTextInsets then box:SetTextInsets(0, 20, 0, 0) end
         b:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up")
         b:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Down")
         b:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
