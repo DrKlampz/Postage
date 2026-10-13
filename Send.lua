@@ -328,7 +328,7 @@ local SKIN_WORDS = { "hide", "scrap", "scale", "devilsaur leather", "core leathe
 -- raw stone, as opposed to bars and sharpening stones
 local RAW_STONE = { "rough stone", "coarse stone", "heavy stone", "solid stone", "dense stone" }
 -- things alchemists make that are filed as trade goods rather than potions
-local ALCHEMY_MADE = { "acid", "ink", "vial", "stonescale oil", "philosopher", "mageblood" }
+local ALCHEMY_MADE = { "acid", "ink", "vial", "stonescale oil", "blackmouth oil", "firefin oil", "philosopher", "mageblood" }
 
 local QUICK = {
     { "Tailoring: cloth", "Interface\\Icons\\INV_Fabric_Linen_01", function(id, c, s) return c == 7 and s == 5 end },
@@ -347,8 +347,8 @@ local QUICK = {
           end
           return (c == 0 or c == 7) and Any(n, { "sharpening stone", "weightstone", "grinding stone", "whetstone" })
       end },
-    { "Fishing: fish and shellfish", "Interface\\Icons\\INV_Misc_Fish_02", function(id, c, s) return c == 7 and s == 8 and IsFish(id) end },
-    { "Cooking: meat and fish", "Interface\\Icons\\INV_Misc_Food_15", function(id, c, s) return c == 7 and s == 8 end },
+    { "Fishing: fish and shellfish", "Interface\\Icons\\INV_Misc_Fish_02", function(id, c, s, n) return c == 7 and s == 8 and IsFish(id) and not Any(n, ALCHEMY_MADE) end },
+    { "Cooking: meat and fish", "Interface\\Icons\\INV_Misc_Food_15", function(id, c, s, n) return c == 7 and s == 8 and not Any(n, ALCHEMY_MADE) end },
     { "Herbalism: herbs", "Interface\\Icons\\INV_Misc_Herb_07", function(id, c, s) return c == 7 and s == 9 end },
     { "Alchemy: potions, elixirs, flasks and what alchemists make", "Interface\\Icons\\INV_Potion_54",
       function(id, c, s, n)
