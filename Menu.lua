@@ -489,6 +489,7 @@ local function QuickMenu(anchor)
         }
     end
     entries[#entries + 1] = { text = "More options...", func = function() P.ToggleOptions() end }
+    if P.Roster then entries[#entries + 1] = { text = "Characters... (delete old ones)", func = function() P.Roster.Toggle() end } end
     if P.WinLook then entries[#entries + 1] = { text = "Window looks...", func = function() P.WinLook.Toggle() end } end
     entries[#entries + 1] = { text = "Hide minimap button", func = function()
         P.db.minimap.show = false
@@ -526,6 +527,7 @@ local function BuildMini()
     border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
     mini:SetScript("OnClick", function(self, btn)
         if IsAltKeyDown() and P.WinLook then P.WinLook.Toggle() return end
+        if IsShiftKeyDown() and P.Roster then P.Roster.Toggle() return end
         if btn == "RightButton" then QuickMenu(self) else P.ToggleOptions() end
     end)
     mini:SetScript("OnDragStart", function(self)
@@ -544,6 +546,7 @@ local function BuildMini()
         GameTooltip:AddLine("Left-click: settings window.", 0.85, 0.85, 0.85)
         GameTooltip:AddLine("Right-click: turn features on or off.", 0.85, 0.85, 0.85)
         GameTooltip:AddLine("Alt-click: window looks.", 0.85, 0.85, 0.85)
+        GameTooltip:AddLine("Shift-click: your characters.", 0.85, 0.85, 0.85)
         GameTooltip:AddLine("Drag: move this button.", 0.85, 0.85, 0.85)
         GameTooltip:AddLine("/postage minimap hides this button.", 0.6, 0.6, 0.6)
         GameTooltip:Show()
