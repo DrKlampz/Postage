@@ -241,6 +241,16 @@ local function ItemInfo(bag, slot)
     end
 end
 
+-- the bags that can hold things to send: backpack, the four bags, and the reagent bag when the character has one
+local function SendBagIDs()
+    local ids = { 0, 1, 2, 3, 4 }
+    local nslots = (C_Container and C_Container.GetContainerNumSlots) or GetContainerNumSlots
+    local rb = (Enum and Enum.BagIndex and Enum.BagIndex.ReagentBag) or 5
+    if nslots and (nslots(rb) or 0) > 0 then ids[#ids + 1] = rb end
+    return ids
+end
+P.SendBagIDs = SendBagIDs
+
 -- attach one bag slot; returns true if it went on
 function P.AttachBagItem(bag, slot)
     local info = ItemInfo(bag, slot)
@@ -259,7 +269,7 @@ end
 function P.AttachWhere(test)
     local n = 0
     local nslots = (C_Container and C_Container.GetContainerNumSlots) or GetContainerNumSlots
-    for bag = 0, 4 do
+    for _, bag in ipairs(SendBagIDs()) do
         for slot = 1, (nslots and nslots(bag) or 0) do
             local info = ItemInfo(bag, slot)
             if info and info.itemID and not info.isBound and not info.isLocked and test(info.itemID) then
@@ -392,7 +402,7 @@ end
 function P.QuickCount(test)
     local n = 0
     local nslots = (C_Container and C_Container.GetContainerNumSlots) or GetContainerNumSlots
-    for bag = 0, 4 do
+    for _, bag in ipairs(SendBagIDs()) do
         for slot = 1, (nslots and nslots(bag) or 0) do
             local info = ItemInfo(bag, slot)
             if info and info.itemID and not info.isBound then
