@@ -347,6 +347,25 @@ local function ClassOf(itemID)
     end
 end
 
+local function QualityOf(id)
+    if C_Item and C_Item.GetItemQualityByID then
+        local q = C_Item.GetItemQualityByID(id)
+        if type(q) == "number" then return q end
+    end
+    local _, _, q = (C_Item and C_Item.GetItemInfo and C_Item.GetItemInfo(id)) or (GetItemInfo and GetItemInfo(id))
+    return type(q) == "number" and q or nil
+end
+
+-- armor and weapons of uncommon quality or better that are not soulbound: what an enchanter can disenchant
+local function Disenchantable(id, c)
+    if c ~= 2 and c ~= 4 then return false end
+    local q = QualityOf(id)
+    if not q or q < 2 or q > 4 then return false end
+    local loc = C_Item and C_Item.GetItemInfoInstant and select(4, C_Item.GetItemInfoInstant(id))
+    if loc == "INVTYPE_BODY" or loc == "INVTYPE_TABARD" or loc == "INVTYPE_BAG" or loc == "INVTYPE_QUIVER" then return false end
+    return true
+end
+
 local function NameOf(id)
     local name = (C_Item and C_Item.GetItemInfo and C_Item.GetItemInfo(id)) or (GetItemInfo and GetItemInfo(id))
     return type(name) == "string" and name:lower() or ""
@@ -404,6 +423,8 @@ local QUICK = {
     { "Other trade goods", "Interface\\Icons\\INV_Misc_Rune_01", function(id, c, s) return c == 7 and s == 11 end },
     { "Jewelcrafting: gems (cut and uncut)", "Interface\\Icons\\INV_Misc_Gem_01",
       function(id, c, s) return c == 3 or (c == 7 and s == 4) end },
+    { "Gear to disenchant: unsoulbound armor and weapons (green or better)", "Interface\\Icons\\INV_Sword_27",
+      function(id, c) return Disenchantable(id, c) end },
     { "All trade goods", "Interface\\Icons\\INV_Misc_Bag_10", function(id, c) return c == 7 end },
 }
 
