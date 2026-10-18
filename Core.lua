@@ -231,6 +231,41 @@ local function ProfString()
     for _, p in ipairs(PROF_ABBR) do if have[p[2]] then out[#out + 1] = p[2] end end
     return table.concat(out, " ")
 end
+-- For an alt that has not logged in since Postage learned to record professions: borrow what Guildie's
+-- armory (your own characters, and guildmates) or Profiteer already saved. Names are English only.
+function P.BorrowedProfs(name)
+    if type(name) ~= "string" then return nil end
+    local lname, have = name:lower(), {}
+    local found
+    local G = _G.GuildieArmoryDB
+    if type(G) == "table" then
+        for _, guild in pairs(G) do
+            local r = type(guild) == "table" and guild[lname]
+            if type(r) == "table" and type(r.professions) == "table" then
+                found = true
+                for _, p in ipairs(r.professions) do
+                    local ab = PROF_BY_NAME[tostring(p):match("^([^:]+)")]
+                    if ab then have[ab] = true end
+                end
+            end
+        end
+    end
+    local PF = _G.ProfiteerDB
+    if not found and type(PF) == "table" and type(PF.recipes) == "table" then
+        for key, profs in pairs(PF.recipes) do
+            if type(key) == "string" and type(profs) == "table" and key:match("^(.-)%-"):lower() == lname then
+                found = true
+                for prof in pairs(profs) do
+                    if PROF_BY_NAME[prof] then have[PROF_BY_NAME[prof]] = true end
+                end
+            end
+        end
+    end
+    if not found then return nil end
+    local out = {}
+    for _, p in ipairs(PROF_ABBR) do if have[p[2]] then out[#out + 1] = p[2] end end
+    return table.concat(out, " ")
+end
 local profTimer
 function P.ScanProfs()
     if profTimer then return end

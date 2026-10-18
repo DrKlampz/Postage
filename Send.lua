@@ -67,7 +67,9 @@ local function Alts()
             local n = c.name
             if c.realm and myRealm and c.realm ~= myRealm then n = n .. "-" .. c.realm end
             out[#out + 1] = n
-            if c.profs and c.profs ~= "" then P.profOf[n:lower()] = c.profs end
+            local pr = c.profs
+            if pr == nil then pr = P.BorrowedProfs(c.name) end
+            if pr and pr ~= "" then P.profOf[n:lower()] = pr end
         end
     end
     table.sort(out)
