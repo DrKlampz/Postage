@@ -88,7 +88,13 @@ local function Alts()
             out[#out + 1] = n
             local pr = c.profs
             if pr == nil then pr = P.BorrowedProfs(c.name) end
-            if pr and pr ~= "" then P.profOf[n:lower()] = pr end
+            if pr and pr ~= "" then   -- main professions only: cooking, first aid and fishing make the rows too long
+                local keep = {}
+                for ab in pr:gmatch("%S+") do
+                    if ab ~= "COOK" and ab ~= "FA" and ab ~= "FSH" and ab ~= "ARC" then keep[#keep + 1] = ab end
+                end
+                if #keep > 0 then P.profOf[n:lower()] = table.concat(keep, " ") end
+            end
         end
     end
     table.sort(out)
