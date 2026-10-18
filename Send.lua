@@ -396,6 +396,8 @@ local QUICK = {
       function(id, c, s) return c == 7 and (s == 1 or s == 2 or s == 3) end },
     { "First Aid: bandages", "Interface\\Icons\\INV_Misc_Bandage_15", function(id, c, s) return c == 0 and s == 7 end },
     { "Other trade goods", "Interface\\Icons\\INV_Misc_Rune_01", function(id, c, s) return c == 7 and s == 11 end },
+    { "Jewelcrafting: gems (cut and uncut)", "Interface\\Icons\\INV_Misc_Gem_01",
+      function(id, c, s) return c == 3 or (c == 7 and s == 4) end },
     { "All trade goods", "Interface\\Icons\\INV_Misc_Bag_10", function(id, c) return c == 7 end },
 }
 
