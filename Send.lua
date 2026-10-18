@@ -55,9 +55,11 @@ local function UpgradeAlts()
     end
 end
 
+P.profOf = {}
 local function Alts()
     UpgradeAlts()
     local out = {}
+    P.profOf = {}
     local _, _, myRealm = P.CharKey()
     local faction = UnitFactionGroup and UnitFactionGroup("player")
     for _, c in pairs(P.db.alts) do
@@ -65,6 +67,7 @@ local function Alts()
             local n = c.name
             if c.realm and myRealm and c.realm ~= myRealm then n = n .. "-" .. c.realm end
             out[#out + 1] = n
+            if c.profs and c.profs ~= "" then P.profOf[n:lower()] = c.profs end
         end
     end
     table.sort(out)
@@ -157,7 +160,8 @@ local function BlackBookMenu(anchor)
         entries[#entries + 1] = { text = "Log in on each alt once to list it here", note = true }
     end
     for _, n in ipairs(alts) do
-        entries[#entries + 1] = { text = n, func = function() SetRecipient(n) end }
+        local pr = P.profOf[n:lower()]
+        entries[#entries + 1] = { text = pr and (n .. "  |cff9a9a9a" .. pr .. "|r") or n, func = function() SetRecipient(n) end }
     end
     section("Recently mailed", fresh(P.db.recent, 8))
     section("Friends", fresh(Friends()))

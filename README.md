@@ -23,7 +23,7 @@ Everything Postage adds lives inside the normal mailbox, so it looks and works l
 
 - **BlackBook.** A contacts button next to the To: box with your alts, people you've mailed,
   friends and guild. Names autocomplete as you type. Your alts are listed once you've logged in
-  on each with Postage, or add one by typing its name and choosing "Add ... to Alts".
+  on each with Postage, or add one by typing its name and choosing "Add ... to Alts". Each alt shows its professions in shorthand (LW, ECH, ALC...).
 - **Keep recipient.** Tick it to keep the name in the To: box after sending, so you can send
   several mails to the same person.
 - **Alt-click** an item in your bags to attach it; **shift-alt-click** attaches every stack of it.

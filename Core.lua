@@ -193,12 +193,65 @@ local function MailOpened()
 end
 P.MailOpened = MailOpened
 
+
+-- Professions in shorthand, saved with each character so the Alts list can show them.
+-- Skill line ids are the same in every language; the order is the order they are shown in.
+local PROF_ABBR = {
+    { 164, "BS" }, { 165, "LW" }, { 171, "ALC" }, { 182, "HRB" }, { 186, "MIN" }, { 197, "TAI" },
+    { 202, "ENG" }, { 333, "ECH" }, { 393, "SKN" }, { 755, "JC" }, { 773, "INS" },
+    { 185, "COOK" }, { 129, "FA" }, { 356, "FSH" }, { 794, "ARC" },
+}
+local PROF_BY_NAME = {      -- fallback when the skill line lookup is missing: English profession names
+    Blacksmithing = "BS", Leatherworking = "LW", Alchemy = "ALC", Herbalism = "HRB", Mining = "MIN",
+    Tailoring = "TAI", Engineering = "ENG", Enchanting = "ECH", Skinning = "SKN", Jewelcrafting = "JC",
+    Inscription = "INS", Cooking = "COOK", ["First Aid"] = "FA", Fishing = "FSH", Archaeology = "ARC",
+}
+local function ProfString()
+    local have = {}
+    if C_SkillInfo and C_SkillInfo.GetSkillLineInfoByID then
+        for _, p in ipairs(PROF_ABBR) do
+            local ok, info = pcall(C_SkillInfo.GetSkillLineInfoByID, p[1])
+            if ok and type(info) == "table" and not info.isHeader and (tonumber(info.rank) or 0) > 0 then
+                have[p[2]] = true
+            end
+        end
+    end
+    if GetProfessions and GetProfessionInfo then
+        local ok, p1, p2, arch, fish, cook = pcall(GetProfessions)
+        if ok then
+            for _, idx in ipairs({ p1 or false, p2 or false, cook or false, fish or false, arch or false }) do
+                if idx then
+                    local ok2, name = pcall(GetProfessionInfo, idx)
+                    if ok2 and type(name) == "string" and PROF_BY_NAME[name] then have[PROF_BY_NAME[name]] = true end
+                end
+            end
+        end
+    end
+    local out = {}
+    for _, p in ipairs(PROF_ABBR) do if have[p[2]] then out[#out + 1] = p[2] end end
+    return table.concat(out, " ")
+end
+local profTimer
+function P.ScanProfs()
+    if profTimer then return end
+    profTimer = true
+    C_Timer.After(2, function()
+        profTimer = nil
+        if not P.db then return end
+        local key = P.CharKey()
+        local c = P.db.alts[key]
+        if not c then return end
+        local ok, s = pcall(ProfString)
+        if ok then c.profs = s end
+    end)
+end
+
 local atMailbox = false
 function P.AtMailbox() return atMailbox end
 
 local f = CreateFrame("Frame")
 for _, ev in ipairs({ "ADDON_LOADED", "PLAYER_LOGIN", "MAIL_SHOW", "MAIL_CLOSED", "MAIL_INBOX_UPDATE",
-                      "MAIL_SEND_SUCCESS", "TRADE_SHOW", "PETITION_SHOW" }) do
+                      "MAIL_SEND_SUCCESS", "TRADE_SHOW", "PETITION_SHOW", "SKILL_LINES_CHANGED" }) do
     pcall(f.RegisterEvent, f, ev)
 end
 
@@ -214,9 +267,13 @@ f:SetScript("OnEvent", P.Safe("Postage", function(_, event, arg1)
         -- earlier versions saved this character under its first name only; drop that entry
         local first = UnitName("player")
         if type(first) == "string" and first ~= name then P.db.alts[first .. "-" .. (realm or "")] = nil end
-        P.db.alts[key] = { name = name, realm = realm, faction = UnitFactionGroup and UnitFactionGroup("player"), class = class }
+        local old = P.db.alts[key]
+        P.db.alts[key] = { name = name, realm = realm, faction = UnitFactionGroup and UnitFactionGroup("player"), class = class, profs = old and old.profs }
+        P.ScanProfs()
         P.Fire("login")
         Print(("v%s loaded. Open a mailbox, or type /postage for options."):format(tostring(P.version)))
+    elseif event == "SKILL_LINES_CHANGED" then
+        P.ScanProfs()
     elseif event == "MAIL_SHOW" then
         atMailbox = true
         MailOpened()
