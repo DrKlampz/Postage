@@ -55,6 +55,25 @@ local function UpgradeAlts()
     end
 end
 
+-- professions Guildie's armory already saved for characters that haven't logged in with this Postage yet
+local function GuildieProfs(c)
+    local A = _G.GuildieArmoryDB
+    if type(A) ~= "table" or type(c.name) ~= "string" then return end
+    local key = c.name:lower()
+    for _, guild in pairs(A) do
+        local r = type(guild) == "table" and guild[key]
+        if type(r) == "table" and type(r.professions) == "table" then
+            local have, out = {}, {}
+            for _, s in ipairs(r.professions) do
+                local nm = type(s) == "string" and s:match("^([^:]+):")
+                if nm and P.ProfAbbr and P.ProfAbbr[nm] then have[P.ProfAbbr[nm]] = true end
+            end
+            for _, ab in ipairs(P.ProfOrder or {}) do if have[ab] then out[#out + 1] = ab end end
+            if #out > 0 then return table.concat(out, " ") end
+        end
+    end
+end
+
 P.profOf = {}
 local function Alts()
     UpgradeAlts()

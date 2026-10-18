@@ -266,6 +266,9 @@ function P.BorrowedProfs(name)
     for _, p in ipairs(PROF_ABBR) do if have[p[2]] then out[#out + 1] = p[2] end end
     return table.concat(out, " ")
 end
+P.ProfAbbr = PROF_BY_NAME
+P.ProfOrder = {}
+for _, p in ipairs(PROF_ABBR) do P.ProfOrder[#P.ProfOrder + 1] = p[2] end
 local profTimer
 function P.ScanProfs()
     if profTimer then return end
