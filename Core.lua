@@ -52,6 +52,7 @@ local Print = P.Print
 
 local reported = {}
 function P.ReportError(what, err)
+    if P.Issue then P.Issue("lua", what, err) end
     if reported[what] then return end
     reported[what] = true
     Print(("|cffff5555Something went wrong in %s:|r %s"):format(what, tostring(err)))
@@ -285,7 +286,18 @@ function P.ScanProfs()
 end
 
 local atMailbox = false
-function P.AtMailbox() return atMailbox end
+-- MAIL_CLOSED doesn't always arrive (walking away, a reload, a closed window), which left this stuck on
+-- and made TradeBlock decline trades with no mailbox open. Trust the mail window itself too.
+local function MailIsOpen()
+    if not atMailbox then return false end
+    local mf = _G.MailFrame
+    if mf and mf.IsShown and not mf:IsShown() then
+        atMailbox = false
+        return false
+    end
+    return true
+end
+function P.AtMailbox() return MailIsOpen() end
 
 local f = CreateFrame("Frame")
 for _, ev in ipairs({ "ADDON_LOADED", "PLAYER_LOGIN", "MAIL_SHOW", "MAIL_CLOSED", "MAIL_INBOX_UPDATE",
@@ -309,7 +321,7 @@ f:SetScript("OnEvent", P.Safe("Postage", function(_, event, arg1)
         P.db.alts[key] = { name = name, realm = realm, faction = UnitFactionGroup and UnitFactionGroup("player"), class = class, profs = old and old.profs }
         P.ScanProfs()
         P.Fire("login")
-        Print(("v%s loaded. Open a mailbox, or type /postage for options."):format(tostring(P.version)))
+        Print(("v%s loaded. Open a mailbox, or type /postage for options."):format((tostring(P.version):gsub("^[vV]", ""))))
     elseif event == "SKILL_LINES_CHANGED" then
         P.ScanProfs()
     elseif event == "MAIL_SHOW" then
@@ -323,12 +335,12 @@ f:SetScript("OnEvent", P.Safe("Postage", function(_, event, arg1)
     elseif event == "MAIL_SEND_SUCCESS" then
         P.Fire("sendSuccess")
     elseif event == "TRADE_SHOW" then
-        if atMailbox and P.On("tradeblock") then
+        if MailIsOpen() and P.On("tradeblock") then
             if CancelTrade then CancelTrade() end
             Print("Declined a trade while the mailbox was open.")
         end
     elseif event == "PETITION_SHOW" then
-        if atMailbox and P.On("tradeblock") then
+        if MailIsOpen() and P.On("tradeblock") then
             if ClosePetition then ClosePetition() end
             Print("Declined a guild charter while the mailbox was open.")
         end

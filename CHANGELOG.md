@@ -1,5 +1,8 @@
 # Postage
 
+## v1.5.1
+- Fix: two-part character names; New: /issues log.
+
 ## v1.5.0
 - Alts list: each alt now shows its professions in shorthand next to its name (BS, LW, ALC, HRB, MIN, TAI, ENG, ECH, SKN, JC, INS; main professions only). Each alt records its professions when you log in on it (and when you learn a new one). Alts you haven't logged in on yet borrow what Guildie's armory or Profiteer already saved for them (English profession names only).
 - Quick attach: new Jewelcrafting button that attaches all your gems, cut and uncut. Switch it off with the other profession buttons in the Mailbox tab.
