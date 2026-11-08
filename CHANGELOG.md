@@ -1,5 +1,8 @@
 # Postage
 
+## v1.5.2
+- Fix: the Alts list showed a long realm suffix after names (and overlapped the profession tags) when an alt's realm was saved with different spelling than the current one.
+
 ## v1.5.1
 - Fix: two-part character names; New: /issues log.
 

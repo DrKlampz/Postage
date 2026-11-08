@@ -84,7 +84,9 @@ local function Alts()
     for _, c in pairs(P.db.alts) do
         if c.name ~= MyName() and (not faction or not c.faction or c.faction == faction) then
             local n = c.name
-            if c.realm and myRealm and c.realm ~= myRealm then n = n .. "-" .. c.realm end
+            -- same realm saved in another spelling ("Realm 1 PvE" vs "Realm1PvE") is still the same realm
+            local function normR(r) return (tostring(r or ""):gsub("[%s%-%p]", ""):lower()) end
+            if c.realm and myRealm and normR(c.realm) ~= normR(myRealm) then n = n .. "-" .. c.realm end
             out[#out + 1] = n
             local pr = c.profs
             if pr == nil then pr = P.BorrowedProfs(c.name) end
