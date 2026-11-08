@@ -2,6 +2,7 @@
 
 ## v1.5.2
 - Fix: the Alts list showed a long realm suffix after names (and overlapped the profession tags) when an alt's realm was saved with different spelling than the current one.
+- Also treats a realm saved with a prefix (for example "CAMWOWUS2Realm1PvE") as the same as the current realm.
 
 ## v1.5.1
 - Fix: two-part character names; New: /issues log.

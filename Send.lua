@@ -86,7 +86,10 @@ local function Alts()
             local n = c.name
             -- same realm saved in another spelling ("Realm 1 PvE" vs "Realm1PvE") is still the same realm
             local function normR(r) return (tostring(r or ""):gsub("[%s%-%p]", ""):lower()) end
-            if c.realm and myRealm and normR(c.realm) ~= normR(myRealm) then n = n .. "-" .. c.realm end
+            local a, b = normR(c.realm), normR(myRealm)
+            -- "CAMWOWUS2Realm1PvE" and "Realm 1 PvE" are the same realm; only show a suffix for a truly different one
+            local same = a == b or a:find(b, 1, true) or b:find(a, 1, true)
+            if c.realm and myRealm and not same then n = n .. "-" .. c.realm end
             out[#out + 1] = n
             local pr = c.profs
             if pr == nil then pr = P.BorrowedProfs(c.name) end
