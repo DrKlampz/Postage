@@ -89,7 +89,9 @@ local function Alts()
             local a, b = normR(c.realm), normR(myRealm)
             -- "CAMWOWUS2Realm1PvE" and "Realm 1 PvE" are the same realm; only show a suffix for a truly different one
             local same = a == b or a:find(b, 1, true) or b:find(a, 1, true)
-            if c.realm and myRealm and not same then n = n .. "-" .. c.realm end
+            -- another realm (PvE vs PvP): can't mail them from here, so leave them out
+            if c.realm and myRealm and not same then n = nil end
+            if n then
             out[#out + 1] = n
             local pr = c.profs
             if pr == nil then pr = P.BorrowedProfs(c.name) end
@@ -99,6 +101,7 @@ local function Alts()
                     if ab ~= "COOK" and ab ~= "FA" and ab ~= "FSH" and ab ~= "ARC" then keep[#keep + 1] = ab end
                 end
                 if #keep > 0 then P.profOf[n:lower()] = table.concat(keep, " ") end
+            end
             end
         end
     end

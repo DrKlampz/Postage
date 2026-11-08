@@ -1,6 +1,7 @@
 # Postage
 
 ## v1.5.2
+- Alts on a different realm (for example your PvE characters while on a PvP realm) are no longer listed, since you can't mail them from there.
 - Fix: the Alts list showed a long realm suffix after names (and overlapped the profession tags) when an alt's realm was saved with different spelling than the current one.
 - Also treats a realm saved with a prefix (for example "CAMWOWUS2Realm1PvE") as the same as the current realm.
 
