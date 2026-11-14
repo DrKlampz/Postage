@@ -1,6 +1,6 @@
 # Postage
 
-## Unreleased
+## v1.5.4
 - Inbox: the Prev / Next arrows and Open All no longer hang over the bottom edge of the window; the window has a little more room under the paging row.
 
 ## v1.5.3
