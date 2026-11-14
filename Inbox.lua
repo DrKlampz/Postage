@@ -495,9 +495,8 @@ local function Build()
             local prev0, nxt0 = P.PageButtons()
             Shift(prev0) Shift(nxt0) Shift(_G.OpenAllMail)
             Shift(_G.InboxCountText) Shift(_G.InboxTooMuchMail)
-            -- the extra 16 is a clear margin under the paging row so the arrows sit inside the window's border
             for _, f in ipairs({ _G.MailFrame, inbox }) do
-                if f and f.GetHeight and f.SetHeight then f:SetHeight(f:GetHeight() + D + 16) end
+                if f and f.GetHeight and f.SetHeight then f:SetHeight(f:GetHeight() + D) end
             end
         end
     else
@@ -537,6 +536,36 @@ local function Build()
     else
         buttons.all:SetPoint("LEFT", buttons.ret, "RIGHT", 6, 0)
     end
+
+    -- keep the paging row (Prev / Next / Open All) inside the window: measure where it really ended up
+    -- on screen and lift it if any part hangs over the bottom edge
+    local function FitBottomRow()
+        local fr = _G.MailFrame
+        local fb = fr and fr.GetBottom and fr:GetBottom()
+        if not fb then return end
+        local p0, n0 = P.PageButtons()
+        local list = { p0, n0, _G.OpenAllMail, buttons.all }
+        local need = 0
+        for _, f in ipairs(list) do
+            local b = f and f.GetBottom and f:GetBottom()
+            if b and f:IsShown() and b < fb + 8 then need = math.max(need, fb + 8 - b) end
+        end
+        if need <= 0 then return end
+        local done = {}
+        for _, f in ipairs(list) do
+            if f and not done[f] and f.GetNumPoints and f:GetNumPoints() > 0 then
+                done[f] = true
+                local pts = {}
+                for i = 1, f:GetNumPoints() do pts[i] = { f:GetPoint(i) } end
+                f:ClearAllPoints()
+                for _, q in ipairs(pts) do f:SetPoint(q[1], q[2], q[3], q[4] or 0, (q[5] or 0) + need) end
+            end
+        end
+    end
+    P.FitBottomRow = FitBottomRow
+    if inbox and inbox.HookScript then inbox:HookScript("OnShow", function() C_Timer.After(0.1, FitBottomRow) end) end
+    if _G.MailFrame and _G.MailFrame.HookScript then _G.MailFrame:HookScript("OnShow", function() C_Timer.After(0.1, FitBottomRow) end) end
+    C_Timer.After(0.5, FitBottomRow)
 
     -- keep the checkboxes in step when the page changes, whatever drives the paging
     local function paged(delta)

@@ -1,5 +1,8 @@
 # Postage
 
+## Unreleased
+- Inbox: the paging row (Prev, Next, Open All) is now measured on screen and lifted whenever any part of it hangs over the bottom edge of the window, whatever skin or scale is in use.
+
 ## v1.5.4
 - Inbox: the Prev / Next arrows and Open All no longer hang over the bottom edge of the window; the window has a little more room under the paging row.
 
