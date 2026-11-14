@@ -1,5 +1,8 @@
 # Postage
 
+## v1.5.3
+- The two leather quick-attach buttons (raw hides and cured leather) are now one Leather button that attaches both.
+
 ## v1.5.2
 - Fonts: the font pack now ships inside this add-on (Fonts folder), so the separate Look Fonts add-on is no longer needed, and there are about 60 more fonts to pick from under Look > Font.
 - Alts on a different realm (for example your PvE characters while on a PvP realm) are no longer listed, since you can't mail them from there.

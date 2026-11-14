@@ -400,10 +400,8 @@ local ALCHEMY_MADE = { "acid", "ink", "vial", "stonescale oil", "blackmouth oil"
 
 local QUICK = {
     { "Tailoring: cloth", "Interface\\Icons\\INV_Fabric_Linen_01", function(id, c, s) return c == 7 and s == 5 end },
-    { "Skinning: raw leather, hides and scales", "Interface\\Icons\\INV_Misc_Pelt_Wolf_01",
-      function(id, c, s, n) return c == 7 and s == 6 and Any(n, SKIN_WORDS) end },
-    { "Leatherworking: cured and crafted leather", "Interface\\Icons\\INV_Misc_LeatherScrap_03",
-      function(id, c, s, n) return c == 7 and s == 6 and not Any(n, SKIN_WORDS) end },
+    { "Leather: hides, scales and cured leather", "Interface\\Icons\\INV_Misc_LeatherScrap_03",
+      function(id, c, s) return c == 7 and s == 6 end },
     { "Mining: ore and raw stone", "Interface\\Icons\\INV_Ore_Copper_01",
       function(id, c, s, n) return c == 7 and s == 7 and (n:find("ore", 1, true) and not n:find("core", 1, true) or Any(n, RAW_STONE)) and not Any(n, { "bar" }) end },
     { "Blacksmithing: bars, sharpening and weight stones", "Interface\\Icons\\INV_Ingot_03",
@@ -486,8 +484,20 @@ local function TrayColors()
     return bg, edge, accent
 end
 
+-- the two leather buttons became one: shift the saved show/hide choices of the buttons after them, once
+local function MigrateQuick()
+    local s = P.WinLook and P.WinLook.Get and P.WinLook.Get("mail")
+    if type(s) ~= "table" or s.leatherMerged then return end
+    s.leatherMerged = true
+    local shown2, shown3 = s.q2 ~= false, s.q3 ~= false
+    s.q2 = (shown2 or shown3) and true or false
+    for i = 3, #QUICK do s["q" .. i] = s["q" .. (i + 1)] end
+    s["q" .. (#QUICK + 1)] = nil
+end
+
 function P.BuildTray()
     if ui.tray then return ui.tray end
+    pcall(MigrateQuick)
     local sf = _G.SendMailFrame
     if not sf then return end
     local t = CreateFrame("Frame", "PostageQuickTray", sf, "BackdropTemplate")
