@@ -1,5 +1,8 @@
 # Postage
 
+## Unreleased
+- Inbox: the Prev / Next arrows and Open All no longer hang over the bottom edge of the window; the window has a little more room under the paging row.
+
 ## v1.5.3
 - The two leather quick-attach buttons (raw hides and cured leather) are now one Leather button that attaches both.
 

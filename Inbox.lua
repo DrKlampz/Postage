@@ -495,8 +495,9 @@ local function Build()
             local prev0, nxt0 = P.PageButtons()
             Shift(prev0) Shift(nxt0) Shift(_G.OpenAllMail)
             Shift(_G.InboxCountText) Shift(_G.InboxTooMuchMail)
+            -- the extra 16 is a clear margin under the paging row so the arrows sit inside the window's border
             for _, f in ipairs({ _G.MailFrame, inbox }) do
-                if f and f.GetHeight and f.SetHeight then f:SetHeight(f:GetHeight() + D) end
+                if f and f.GetHeight and f.SetHeight then f:SetHeight(f:GetHeight() + D + 16) end
             end
         end
     else
