@@ -1,6 +1,6 @@
 # Postage
 
-## Unreleased
+## v1.5.5
 - Inbox: the paging row (Prev, Next, Open All) is now measured on screen and lifted whenever any part of it hangs over the bottom edge of the window, whatever skin or scale is in use.
 
 ## v1.5.4
