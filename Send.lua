@@ -55,6 +55,25 @@ local function UpgradeAlts()
     end
 end
 
+-- professions another installed add-on's armory already saved for characters that haven't logged in with this Postage yet
+local function GuildieProfs(c)
+    local A = (_G.C_AddOns and _G.C_AddOns.IsAddOnLoaded or _G.IsAddOnLoaded)("Guildie") and _G.GuildieArmoryDB or nil
+    if type(A) ~= "table" or type(c.name) ~= "string" then return end
+    local key = c.name:lower()
+    for _, guild in pairs(A) do
+        local r = type(guild) == "table" and guild[key]
+        if type(r) == "table" and type(r.professions) == "table" then
+            local have, out = {}, {}
+            for _, s in ipairs(r.professions) do
+                local nm = type(s) == "string" and s:match("^([^:]+):")
+                if nm and P.ProfAbbr and P.ProfAbbr[nm] then have[P.ProfAbbr[nm]] = true end
+            end
+            for _, ab in ipairs(P.ProfOrder or {}) do if have[ab] then out[#out + 1] = ab end end
+            if #out > 0 then return table.concat(out, " ") end
+        end
+    end
+end
+
 P.profOf = {}
 local function Alts()
     UpgradeAlts()
@@ -75,6 +94,7 @@ local function Alts()
             if n then
             out[#out + 1] = n
             local pr = c.profs
+            if pr == nil then pr = P.BorrowedProfs(c.name) end
             if pr and pr ~= "" then   -- main professions only: cooking, first aid and fishing make the rows too long
                 local keep = {}
                 for ab in pr:gmatch("%S+") do
