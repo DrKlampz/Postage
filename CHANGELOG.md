@@ -1,5 +1,8 @@
 # Postage
 
+## Unreleased
+- The subject line now fills itself with the first attached item's name (with the stack size when it is more than one) when you attach items without sending gold, and clears again if you take the items off.
+
 ## v1.5.5
 - Inbox: the paging row (Prev, Next, Open All) is now measured on screen and lifted whenever any part of it hangs over the bottom edge of the window, whatever skin or scale is in use.
 

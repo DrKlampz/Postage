@@ -782,12 +782,24 @@ local function Build()
         if c > 0 then parts[#parts + 1] = c .. "c" end
         return table.concat(parts, " ")
     end
+    -- no gold: use the first attached item's name, as the stock mail window does (stack size added when it is more than one)
+    local function ItemText()
+        if not GetSendMailItem then return nil end
+        local max = tonumber(_G.ATTACHMENTS_MAX_SEND) or 12
+        for i = 1, max do
+            local name, _, _, count = GetSendMailItem(i)
+            if type(name) == "string" and name ~= "" and not P.IsSecret(name) then
+                if type(count) == "number" and not P.IsSecret(count) and count > 1 then return name .. " (" .. count .. ")" end
+                return name
+            end
+        end
+    end
     local function AutoSubject()
         if filling or not P.On("wire") then return end
         local subj = _G.SendMailSubjectEditBox
         if not subj then return end
         local cur = P.Trim(subj:GetText() or "")
-        local want = GoldText()
+        local want = GoldText() or ItemText()
         filling = true
         if want and (cur == "" or cur == lastAuto) then
             if cur ~= want then subj:SetText(want) end
@@ -808,6 +820,12 @@ local function Build()
         end
     end
     if _G.SendMailFrame_CanSend then hooksecurefunc("SendMailFrame_CanSend", AutoSubject) end
+    if ClickSendMailItemButton then hooksecurefunc("ClickSendMailItemButton", function() C_Timer.After(0, AutoSubject) end) end
+    if _G.SendMailFrame and _G.SendMailFrame.RegisterEvent then
+        local ev = CreateFrame("Frame")
+        ev:RegisterEvent("MAIL_SEND_INFO_UPDATE")
+        ev:SetScript("OnEvent", function() AutoSubject() end)
+    end
     local send = _G.SendMailMailButton
     if send then send:HookScript("PreClick", AutoSubject) end
     if _G.SendMailFrame then _G.SendMailFrame:HookScript("OnShow", function() lastAuto = nil end) end
