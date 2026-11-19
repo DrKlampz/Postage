@@ -1,6 +1,7 @@
 # Postage
 
-## Unreleased
+## v1.5.9
+- Works completely on its own: alts you have not logged in with yet no longer borrow their professions from another add-on's data. They show up once you log in on them.
 - Removed the add-on-to-add-on theming hooks and cross-add-on names from the window look code; the shared look sync between your add-ons works the same.
 - The "Pulse the flair" option now also pulses the edge finish (soft, bevel, double line and glow), not just the corner studs.
 
