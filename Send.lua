@@ -650,11 +650,7 @@ end
 local function ApplyPaper(id)
     local s = P.WinLook and P.WinLook.Get and P.WinLook.Get(id)
     if not s then return end
-    -- GreedUI's page for Postage can choose the paper too; with GreedUI's look on, the default paper is dark
-    local GU = _G.GreedUI
-    local gt = GU and GU.GetTheme and GU.GetTheme("Postage")
     local mode, pcol, palpha = s.paper or "original", s.paperColor, s.paperAlpha
-    if gt then mode, pcol, palpha = gt.paper or (mode == "original" and "dark" or mode), gt.paperColor or pcol, gt.paperAlpha or palpha end
     for _, tex in ipairs(PaperPieces(id)) do
         if tex.SetVertexColor then
             if not tex.pgOrig then
