@@ -1,6 +1,7 @@
 # Postage
 
 ## Unreleased
+- Your custom look is now shared with your other add-ons: change colors, background, border or opacity in one and the rest follow (the newest change wins). It is on by default; untick "Sync my look with my other add-ons" in the Look window to turn it off.
 - The subject line now fills itself with the first attached item's name (with the stack size when it is more than one) when you attach items without sending gold, and clears again if you take the items off.
 
 ## v1.5.5
