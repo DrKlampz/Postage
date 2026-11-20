@@ -1,5 +1,9 @@
 # Postage
 
+## v1.5.15
+
+- Redrawn anarchy symbol with a hand-brushed, worn look
+
 ## v1.5.14
 
 - New background symbols: sword, crossed swords, shield, sun and paw print
