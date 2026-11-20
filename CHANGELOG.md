@@ -1,5 +1,10 @@
 # Postage
 
+## v1.5.13
+
+- New background symbols: Celtic cross, anarchy, peace sign, skull and crossbones, radiation, atom, infinity, lightning bolt, anchor, Helm of Awe, valknut, Eye of Providence, triskele and fleur-de-lis
+- Picking a color for a piece of artwork now turns its own-color option on, so the color changes at once
+
 ## v1.5.12
 - Every piece of artwork (corners, crest, edge pattern, title banner, divider, middle emblem) can now have its own color. New "Your file" emblem slots show your own faction, race and city images from the Media folder.
 
