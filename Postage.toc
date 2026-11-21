@@ -9,6 +9,7 @@
 ## SavedVariables: PostageDB
 ## X-License: MIT
 ## X-Wago-ID: RNL444No
+## X-Curse-Project-ID: 1792013
 
 IssueLog.lua
 Core.lua
