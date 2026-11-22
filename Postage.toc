@@ -20,3 +20,4 @@ Menu.lua
 Inbox.lua
 Send.lua
 OpenMail.lua
+Sounds.lua

@@ -94,6 +94,13 @@ local function Options()
                 chk("Dark Postage theme on the mailbox windows (a custom look in the Mailbox tab replaces it)", db, "skinMail",
                     function() if P.SkinMail then P.SkinMail() end end),
             } },
+            { id = "sound", title = "New mail sound", open = true, rows = {
+                chk("Play a sound when new mail arrives", db, "mailSound", nil, false),
+                { kind = "cycle", label = "Sound", values = P.Sounds and P.Sounds.ORDER or { "mail_chime" }, names = P.Sounds and P.Sounds.NAMES or {},
+                  get = function() return P.db.mailSoundKey or "mail_chime" end,
+                  set = function(v) P.db.mailSoundKey = v if P.Sounds then P.Sounds.Play(v) end end },
+                { kind = "button", label = "Play it", onClick = function() if P.Sounds then P.Sounds.Play() end end },
+            } },
             { id = "send", title = "Send Mail", open = true, rows = {
                 chk("Keep the recipient after sending (for several mails in a row)", db, "keepRecipient", function(v)
                     if P.Fire then P.Fire("options") end end, false),

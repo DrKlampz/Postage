@@ -30,6 +30,8 @@ P.DEFAULTS = {
     freeBagSlots = 0,
     minimap = { show = true, angle = 215 },
     autocomplete = true,
+    mailSound = false,       -- play a sound when new mail arrives
+    mailSoundKey = "mail_chime",
     keepRecipient = false,  -- keep the To: name after sending, for sending several mails
     recent = {},     -- recently mailed names, newest first
     alts = {},       -- ["Name-Realm"] = { name, realm, faction, class }
