@@ -2,6 +2,7 @@
 
 ## v1.5.16
 
+- Personal sounds can be dropped into Media\\personal and listed in PersonalSounds.lua; they show up in the same picker (this file and folder are not part of the public release)
 - New option: play a sound when new mail arrives (off until you switch it on). Pick from 15 sounds made for Postage, ten of the game's own sounds, or your own file saved as Media\\mysound.ogg. Choosing a sound plays it, and there is a Play it button. Find it under New mail sound in the options (Alt-click the minimap button)
 
 ## v1.5.15

@@ -21,3 +21,4 @@ Inbox.lua
 Send.lua
 OpenMail.lua
 Sounds.lua
+PersonalSounds.lua

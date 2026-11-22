@@ -42,11 +42,20 @@ S.NAMES, S.ORDER = NAMES, ORDER
 local function Find(key) for _, e in ipairs(S.LIST) do if e.key == key then return e end end return S.LIST[1] end
 function S.Current() return Find(P.db and P.db.mailSoundKey or "mail_chime") end
 
+-- extra sounds added by another file (PersonalSounds.lua keeps the ones you copied in yourself)
+function S.Add(key, name, file)
+    if NAMES[key] then return end
+    local e = { key = key, name = name, file = file, dir = "personal\\" }
+    table.insert(S.LIST, #S.LIST, e)      -- before "Your own sound", which stays last
+    NAMES[key] = name
+    table.insert(ORDER, #ORDER, key)
+end
+
 function S.PlayEntry(e)
     local files = e.files or (e.file and { e.file })
     if files then
         for _, f in ipairs(files) do
-            local ok, will = pcall(PlaySoundFile, MEDIA .. f, "Master")
+            local ok, will = pcall(PlaySoundFile, MEDIA .. (e.dir or "") .. f, "Master")
             if ok and will then return true end
         end
         return false
