@@ -1,5 +1,10 @@
 # Postage
 
+## Unreleased
+
+- Quick attach: the Jewelcrafting button is now called Gems, and it finds gems the game files under Other trade goods (Malachite, Tigerseye, Moss Agate, Shadowgem, Jade, Lesser Moonstone, Citrine, Aquamarine, pearls and so on). They no longer also show up under Other trade goods.
+- Quick attach: the Engineering button also finds parts by name (casings, tubes, bolts, wiring, modulators, blasting powder and similar), not just the ones filed as parts.
+
 ## v1.5.16
 
 - Personal sounds can be dropped into Media\\personal and listed in PersonalSounds.lua; they show up in the same picker (this file and folder are not part of the public release)

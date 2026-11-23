@@ -398,6 +398,19 @@ local RAW_STONE = { "rough stone", "coarse stone", "heavy stone", "solid stone",
 -- things alchemists make that are filed as trade goods rather than potions
 local ALCHEMY_MADE = { "acid", "ink", "vial", "stonescale oil", "blackmouth oil", "firefin oil", "philosopher", "mageblood" }
 
+-- Gems are filed under "Other" (class 7, subclass 11) on this client, not under Jewelcrafting, so they are matched by name
+local GEM_WORDS = { "malachite", "tigerseye", "tiger's eye", "moss agate", "shadowgem", "jade", "moonstone", "citrine",
+    "aquamarine", "pearl", "star ruby", "sapphire", "emerald", "opal", "diamond", "ruby", "topaz", "amethyst", "garnet",
+    "zircon", "onyx", "nightseye", "sunstone", "gem" }
+local function IsGem(c, s, n) return c == 3 or (c == 7 and (s == 4 or (s ~= 7 and s ~= 5 and s ~= 6 and s ~= 8 and s ~= 9 and Any(n, GEM_WORDS)))) end
+-- engineering parts that are not always filed as parts, matched by name (not bars, cloth, leather or herbs)
+local ENG_WORDS = { "casing", " tube", "bolts", "wiring", "modulator", "widget", "blasting powder", "dynamite", "fuse",
+    "gear", "springs", "trigger", "gyro", "gunpowder", "explosive", "bomb", "flask of oil", "crystallized", "rocket" }
+local function IsEngineering(c, s, n)
+    if c == 7 and (s == 1 or s == 2 or s == 3) then return true end
+    return c == 7 and s ~= 5 and s ~= 6 and s ~= 7 and s ~= 8 and s ~= 9 and Any(n, ENG_WORDS)
+end
+
 local QUICK = {
     { "Tailoring: cloth", "Interface\\Icons\\INV_Fabric_Linen_01", function(id, c, s) return c == 7 and s == 5 end },
     { "Leather: hides, scales and cured leather", "Interface\\Icons\\INV_Misc_LeatherScrap_03",
@@ -424,11 +437,11 @@ local QUICK = {
     { "Elemental: motes, essences, primals", "Interface\\Icons\\INV_Elemental_Primal_Fire", function(id, c, s) return c == 7 and s == 10 end },
     { "Enchanting: dust, essences, shards", "Interface\\Icons\\INV_Enchant_DustStrange", function(id, c, s) return c == 7 and s == 12 end },
     { "Engineering: parts, explosives, devices", "Interface\\Icons\\INV_Misc_Gear_01",
-      function(id, c, s) return c == 7 and (s == 1 or s == 2 or s == 3) end },
+      function(id, c, s, n) return IsEngineering(c, s, n) end },
     { "First Aid: bandages", "Interface\\Icons\\INV_Misc_Bandage_15", function(id, c, s) return c == 0 and s == 7 end },
-    { "Other trade goods", "Interface\\Icons\\INV_Misc_Rune_01", function(id, c, s) return c == 7 and s == 11 end },
-    { "Jewelcrafting: gems (cut and uncut)", "Interface\\Icons\\INV_Misc_Gem_01",
-      function(id, c, s) return c == 3 or (c == 7 and s == 4) end },
+    { "Other trade goods", "Interface\\Icons\\INV_Misc_Rune_01", function(id, c, s, n) return c == 7 and s == 11 and not IsGem(c, s, n) end },
+    { "Gems: gems and pearls, cut and uncut", "Interface\\Icons\\INV_Misc_Gem_01",
+      function(id, c, s, n) return IsGem(c, s, n) end },
     { "Gear to disenchant: unsoulbound armor and weapons (green or better)", "Interface\\Icons\\INV_Sword_27",
       function(id, c) return Disenchantable(id, c) end },
     { "All trade goods", "Interface\\Icons\\INV_Misc_Bag_10", function(id, c) return c == 7 end },
