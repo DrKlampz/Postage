@@ -56,7 +56,7 @@ function S.PlayEntry(e)
     if files then
         for _, f in ipairs(files) do
             local ok, will = pcall(PlaySoundFile, MEDIA .. (e.dir or "") .. f, "Master")
-            if ok and will then return true end
+            if ok and will ~= false then return true end   -- some clients return nothing for a file that plays fine
         end
         return false
     end

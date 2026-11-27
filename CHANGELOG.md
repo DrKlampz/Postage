@@ -1,5 +1,9 @@
 # Postage
 
+## v1.5.18
+
+- Fixed the new-mail sound always playing the game's whisper sound whatever you picked, for the same reason: a sound file that played without the game confirming it was treated as failed
+
 ## v1.5.17
 
 - Quick attach: the Jewelcrafting button is now called Gems, and it finds gems the game files under Other trade goods (Malachite, Tigerseye, Moss Agate, Shadowgem, Jade, Lesser Moonstone, Citrine, Aquamarine, pearls and so on). They no longer also show up under Other trade goods.
